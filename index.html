@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FFF7FB">
+<meta name="theme-color" content="#FFF7FB" id="meta-color">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mi semestre">
 <title>Mi semestre 🎀 · Planificación</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,9 +52,10 @@ input,textarea{font-family:inherit;color:inherit}
 .wrap{max-width:1120px;margin:0 auto;padding:0 16px}
 header.top{
   display:flex;align-items:center;gap:12px;
-  padding:20px 0 12px;
+  padding:max(20px,env(safe-area-inset-top)) 0 12px;
 }
-.brand h1{font-size:19px}
+.brand h1{font-size:19px;display:flex;align-items:center;gap:9px}
+.mono{width:30px;height:30px;border-radius:9px;flex:none}
 .brand p{margin:2px 0 0;font-size:12.5px;color:var(--soft);font-weight:600}
 .spacer{flex:1}
 .icon-btn{
@@ -225,6 +234,39 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .btn.pri{background:var(--rosa);color:#fff}
 .btn.ghost{box-shadow:none;border:2px solid var(--line);color:var(--soft)}
 
+
+/* ---------- acordeón de materias ---------- */
+.acordeon{max-width:720px;margin:0 auto}
+.card.mat{padding:14px 16px}
+.card.mat.open{box-shadow:0 0 0 2.5px var(--lav),var(--shadow)}
+.mat-head{display:flex;align-items:center;gap:11px;width:100%;text-align:left;margin:0}
+.mat-tx{flex:1;min-width:0}
+.mat-tx b{display:block;font-size:15.5px;font-weight:700}
+.mat-tx .muted{display:block;font-size:11.5px;font-weight:600}
+.mat-head .hrs{font-size:11.5px;font-weight:700;text-align:right;line-height:1.25;flex:none}
+.mat-head .hrs .muted{font-size:10px}
+.chev{flex:none;font-size:13px;color:var(--soft)}
+.mat-body{margin-top:14px}
+.rev-box{background:var(--card2);border-radius:16px;padding:13px;margin-top:10px}
+.rev-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px}
+.rev-top b{font-size:13.5px}
+.rev-top input[type=date]{
+  border:2px solid var(--line);background:var(--card);border-radius:10px;
+  padding:4px 8px;font-size:12px;font-weight:700;
+}
+.rev-box .uni{border-bottom-color:var(--line)}
+.rev-box .add-row input{background:var(--card)}
+.rev-box .add-row{flex-wrap:wrap}
+
+/* ---------- agenda de fechas ---------- */
+.agenda{margin-top:9px}
+.ag-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.ag-item:last-child{border-bottom:none}
+.ag-dot{flex:none;width:9px;height:9px;border-radius:50%}
+.ag-item b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-item .muted{flex:1;font-size:11.5px;font-weight:600;white-space:nowrap}
+.ag-item .cuenta{flex:none}
+
 .hidden{display:none}
 @media(min-width:860px){
   body{padding-bottom:24px}
@@ -236,6 +278,7 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
   nav.tabs button i{font-size:15px}
   nav.tabs button.on{background:var(--rosa);color:#fff}
   .brand h1{font-size:23px}
+  .mono{width:36px;height:36px;border-radius:11px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 :focus-visible{outline:3px solid var(--lav);outline-offset:2px;border-radius:8px}
@@ -246,10 +289,11 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1>Mi semestre 🎀</h1>
+      <h1><img src="./favicon-64.png" alt="" class="mono">Mi semestre</h1>
       <p id="rango">—</p>
     </div>
     <div class="spacer"></div>
+    <span id="sync-luz" style="font-size:17px;opacity:.85"></span>
     <button class="icon-btn" id="btn-tema" title="Modo noche">🌙</button>
   </header>
 
@@ -337,9 +381,20 @@ let mem = {};
 function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?? null; } }
 function rawSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 
-const DB_BASE = {semanas:{}, temario:{}, revision:{}};
+const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, ts:0};
 let db = (()=>{ try{ return Object.assign({}, DB_BASE, JSON.parse(raw(KEY)||'{}')); }catch(e){ return {...DB_BASE}; } })();
-function save(){ rawSet(KEY, JSON.stringify(db)); }
+function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPronto(); }
+
+/* migracion de formatos viejos */
+(function migrar(){
+  Object.keys(db.revision||{}).forEach(k=>{
+    if(typeof db.revision[k] === 'string') db.revision[k] = {r1:db.revision[k], r2:''};
+  });
+  Object.keys(db.temario||{}).forEach(k=>{
+    (db.temario[k]||[]).forEach(u => { if(!u.r) u.r = 1; });
+  });
+  if(!db.controles) db.controles = {};
+})();
 
 function claveSemana(d){
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -357,6 +412,63 @@ function sem(k){
   if(!db.semanas[k].check) db.semanas[k].check = {};
   if(!db.semanas[k].min)   db.semanas[k].min   = {};
   return db.semanas[k];
+}
+
+
+/* =========================================================
+   2b. SINCRONIZACIÓN AUTOMÁTICA  ·  celu <-> compu
+   Pegá acá la URL de tu base de Firebase y listo.
+   Si lo dejás vacío, funciona igual pero solo en este dispositivo.
+   ========================================================= */
+const SYNC = {
+  url:   'https://planificacion-academica-fcea-default-rtdb.firebaseio.com',
+  clave: 'fcea-zg9xc3upph'   // tu clave secreta: no la compartas ni la cambies
+};
+
+let estadoSync = SYNC.url ? 'esperando' : 'local';
+let timerSubida = null;
+
+function pintarEstado(){
+  const el = document.getElementById('sync-luz');
+  if(!el) return;
+  const txt = {local:'', esperando:'⏳', ok:'☁️', error:'⚠️'};
+  el.textContent = txt[estadoSync] || '';
+  el.title = {local:'Guardado solo en este dispositivo', esperando:'Sincronizando…',
+              ok:'Sincronizado', error:'No se pudo conectar'}[estadoSync] || '';
+}
+
+function nodo(){ return SYNC.url.replace(/\/$/,'') + '/planner/' + SYNC.clave + '.json'; }
+
+function subirPronto(){
+  if(!SYNC.url) return;
+  clearTimeout(timerSubida);
+  timerSubida = setTimeout(subir, 1200);
+}
+function subir(){
+  if(!SYNC.url) return;
+  estadoSync = 'esperando'; pintarEstado();
+  fetch(nodo(), {method:'PUT', body: JSON.stringify(db)})
+    .then(r => { estadoSync = r.ok ? 'ok' : 'error'; pintarEstado(); })
+    .catch(() => { estadoSync = 'error'; pintarEstado(); });
+}
+function bajar(primera){
+  if(!SYNC.url) return;
+  fetch(nodo())
+    .then(r => r.json())
+    .then(remoto => {
+      estadoSync = 'ok';
+      if(remoto && remoto.semanas){
+        if((remoto.ts||0) > (db.ts||0)){
+          db = Object.assign({}, DB_BASE, remoto);
+          rawSet(KEY, JSON.stringify(db));
+          pintar();
+        } else if(primera && (db.ts||0) > (remoto.ts||0)){
+          subir();
+        }
+      } else if(primera){ subir(); }
+      pintarEstado();
+    })
+    .catch(() => { estadoSync = 'error'; pintarEstado(); });
 }
 
 /* =========================================================
@@ -542,59 +654,149 @@ function renderSemana(){
    7. VISTA · MATERIAS (temario + revisión)
    ========================================================= */
 const CURSANDO = Object.keys(MAT).filter(k => MAT[k].prio).sort((a,b) => MAT[a].prio - MAT[b].prio);
-const MEDALLA = ['🥇','🥈','🥉','4','5','6','7'];
+const MEDALLA = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣'];
+let abierta = null;
+
+function rev(k){
+  if(typeof db.revision[k] === 'string') db.revision[k] = {r1:db.revision[k], r2:''};
+  if(!db.revision[k]) db.revision[k] = {r1:'', r2:''};
+  return db.revision[k];
+}
+function ctrls(k){ if(!db.controles[k]) db.controles[k] = []; return db.controles[k]; }
+function unis(k){  if(!db.temario[k])   db.temario[k]   = []; return db.temario[k]; }
+function dias(f){  return f ? Math.ceil((new Date(f + 'T12:00') - HOY) / 864e5) : null; }
+function fmt(f){   const d = new Date(f + 'T12:00'); return d.getDate() + '/' + (d.getMonth()+1); }
+function cuando(d){
+  if(d === null) return '';
+  if(d < 0)  return 'ya pasó';
+  if(d === 0) return '¡es hoy!';
+  if(d === 1) return 'mañana';
+  return 'en ' + d + ' días';
+}
+function claseUrgencia(d){ return d <= 7 ? 'mal' : (d <= 21 ? 'ojo' : 'bien'); }
+
+/* todas las fechas del semestre, ordenadas */
+function agenda(){
+  const out = [];
+  CURSANDO.forEach(k => {
+    const r = rev(k);
+    if(r.r1) out.push({k, t:'Revisión 1', f:r.r1, d:dias(r.r1)});
+    if(r.r2) out.push({k, t:'Revisión 2', f:r.r2, d:dias(r.r2)});
+    ctrls(k).forEach(c => { if(!c.ok && c.f) out.push({k, t:c.t || 'Control', f:c.f, d:dias(c.f), ctrl:true}); });
+  });
+  return out.filter(x => x.d >= 0).sort((a,b) => a.d - b.d);
+}
+
+/* un bloque de revisión con su temario */
+function bloqueRev(k, rn){
+  const m = MAT[k], r = rev(k), f = r['r'+rn];
+  const lista = unis(k).map((u,j) => ({u,j})).filter(x => (x.u.r||1) === rn);
+  const listas = lista.filter(x => x.u.ok).length;
+  const pct = lista.length ? Math.round(listas/lista.length*100) : 0;
+  const d = dias(f);
+  const faltan = lista.length - listas;
+
+  let chip = '<span class="cuenta">sin fecha</span>', ritmo = '';
+  if(f){
+    if(d < 0) chip = '<span class="cuenta">ya pasó</span>';
+    else {
+      const semanas = Math.max(1, Math.ceil(d/7));
+      const porSem = faltan / semanas;
+      const cl = faltan === 0 ? 'bien' : (porSem <= 1.5 ? 'bien' : (porSem <= 3 ? 'ojo' : 'mal'));
+      chip = `<span class="cuenta ${cl}">${cuando(d)}</span>`;
+      ritmo = faltan === 0
+        ? '<b style="color:var(--menta)">temario terminado ✨</b>'
+        : (lista.length ? `necesitás <b>${porSem.toFixed(1)} unidades por semana</b>` : '');
+    }
+  }
+
+  return `<div class="rev-box">
+    <div class="rev-top">
+      <b>${rn === 1 ? '🍂 Revisión 1' : '🎄 Revisión 2'}</b>
+      <input type="date" value="${f||''}" data-rev-fecha="${k}|r${rn}">
+      ${chip}
+    </div>
+    ${lista.length ? `<div class="bar"><i style="width:${pct}%;background:${m.c}"></i></div>
+      <p class="foco" style="margin:7px 0 6px">${listas}/${lista.length} unidades · ${pct}%${ritmo ? ' · ' + ritmo : ''}</p>` : ''}
+    ${lista.length
+      ? lista.map(x => `<div class="uni ${x.u.ok?'done':''}">
+          <button class="tick" data-uni="${k}|${x.j}">✓</button>
+          <button class="nm" data-uni="${k}|${x.j}">${esc(x.u.t)}</button>
+          <button class="del" data-del="${k}|${x.j}" title="Borrar">×</button>
+        </div>`).join('')
+      : '<p class="vacio">Sin unidades cargadas todavía 🌷</p>'}
+    <div class="add-row">
+      <input placeholder="Unidad · tema" data-add="${k}|${rn}">
+      <button data-addbtn="${k}|${rn}">Agregar</button>
+    </div>
+  </div>`;
+}
+
+/* controles de una materia */
+function bloqueCtrl(k){
+  const cs = ctrls(k);
+  return `<div class="rev-box">
+    <div class="rev-top"><b>📝 Controles del semestre</b></div>
+    ${cs.length
+      ? cs.map((c,j) => {
+          const d = dias(c.f);
+          return `<div class="uni ${c.ok?'done':''}">
+            <button class="tick" data-ctrl="${k}|${j}">✓</button>
+            <button class="nm" data-ctrl="${k}|${j}">${esc(c.t)}
+              <em style="font-style:normal;color:var(--soft);font-weight:600">
+                ${c.f ? ' · ' + fmt(c.f) + (c.ok ? '' : ' · ' + cuando(d)) : ''}
+              </em>
+            </button>
+            <button class="del" data-cdel="${k}|${j}" title="Borrar">×</button>
+          </div>`;
+        }).join('')
+      : '<p class="vacio">Todavía no cargaste controles</p>'}
+    <div class="add-row">
+      <input placeholder="Control 1" data-cadd-t="${k}" style="flex:2">
+      <input type="date" data-cadd-f="${k}" style="flex:1.2;min-width:120px">
+      <button data-caddbtn="${k}">Sumar</button>
+    </div>
+  </div>`;
+}
 
 function renderMaterias(){
   const {plan} = balance();
-  let h = `<div class="card"><div class="eyebrow">Cómo se usa</div>
-    <p class="foco" style="margin:6px 0 0">Cargá las unidades del temario de cada materia y marcalas cuando las termines.
-    Poné la fecha de la revisión y te digo <b>a qué ritmo tenés que ir</b> para llegar sobrada.</p></div>`;
+  const ag = agenda();
 
-  h += '<div class="grid">' + CURSANDO.map(k => {
+  let h = `<div class="card">
+    <div class="eyebrow">Lo que viene</div>
+    ${ag.length
+      ? '<div class="agenda">' + ag.slice(0,6).map(x => {
+          const m = MAT[x.k];
+          return `<div class="ag-item">
+            <span class="ag-dot" style="background:${m.c}"></span>
+            <b>${m.e} ${esc(m.n)}</b>
+            <span class="muted">${esc(x.t)}</span>
+            <span class="cuenta ${claseUrgencia(x.d)}">${cuando(x.d)}</span>
+          </div>`;
+        }).join('') + '</div>'
+      : '<p class="foco" style="margin:6px 0 0">Cargá las fechas de las revisiones y de los controles y te van a aparecer acá, ordenadas por cercanía.</p>'}
+  </div>`;
+
+  h += '<div class="acordeon">' + CURSANDO.map(k => {
     const m = MAT[k];
-    const t = db.temario[k] || [];
+    const t = unis(k);
     const listas = t.filter(u => u.ok).length;
     const pct = t.length ? Math.round(listas/t.length*100) : 0;
-    const fecha = db.revision[k] || '';
-    let cuenta = '<span class="cuenta">sin fecha</span>', ritmo = '';
-    if(fecha){
-      const dias = Math.ceil((new Date(fecha + 'T12:00') - HOY) / 864e5);
-      const faltan = t.length - listas;
-      if(dias < 0) cuenta = '<span class="cuenta">ya pasó</span>';
-      else {
-        const semanas = Math.max(1, Math.ceil(dias/7));
-        const porSem = faltan / semanas;
-        const clase = faltan === 0 ? 'bien' : (porSem <= 1.5 ? 'bien' : (porSem <= 3 ? 'ojo' : 'mal'));
-        cuenta = `<span class="cuenta ${clase}">faltan ${dias} días</span>`;
-        ritmo = faltan === 0
-          ? '<span style="color:var(--menta);font-weight:700">temario terminado ✨</span>'
-          : `necesitás <b>${porSem.toFixed(1)} unidades por semana</b>`;
-      }
-    }
-    return `<div class="card">
-      <div class="mat-head">
+    const prox = ag.filter(x => x.k === k)[0];
+    const open = abierta === k;
+    return `<div class="card mat ${open?'open':''}">
+      <button class="mat-head" data-acc="${k}">
         <span class="rank" style="background:${m.c}33;color:${m.c}">${MEDALLA[m.prio-1]}</span>
-        <h3>${m.e} ${esc(m.n)}</h3>
-        <span class="hrs">${plan[k] ? hs(plan[k]) : '—'}<br>por semana</span>
-      </div>
-      <div class="fecha-row">
-        <span>🗓️ Revisión:</span>
-        <input type="date" value="${fecha}" data-rev-fecha="${k}">
-        ${cuenta}
-      </div>
-      ${t.length ? `<div class="bar" style="margin-bottom:10px"><i style="width:${pct}%;background:${m.c}"></i></div>
-        <p class="foco" style="margin:0 0 8px">${listas}/${t.length} unidades · ${pct}% ${ritmo ? '· ' + ritmo : ''}</p>` : ''}
-      ${t.length
-        ? t.map((u,j) => `<div class="uni ${u.ok?'done':''}">
-            <button class="tick" data-uni="${k}|${j}">✓</button>
-            <button class="nm" data-uni="${k}|${j}">${esc(u.t)}</button>
-            <button class="del" data-del="${k}|${j}" title="Borrar">×</button>
-          </div>`).join('')
-        : '<p class="vacio">Todavía no cargaste el temario 🌷</p>'}
-      <div class="add-row">
-        <input placeholder="Unidad 1 · nombre del tema" data-add="${k}">
-        <button data-addbtn="${k}">Agregar</button>
-      </div>
+        <span class="mat-tx">
+          <b>${m.e} ${esc(m.n)}</b>
+          <span class="muted">${t.length ? listas + '/' + t.length + ' unidades · ' + pct + '%' : 'sin temario'}${prox ? ' · ' + esc(prox.t) + ' ' + cuando(prox.d) : ''}</span>
+        </span>
+        <span class="hrs">${plan[k] ? hs(plan[k]) : '—'}<br><span class="muted">semanal</span></span>
+        <span class="chev">${open ? '▾' : '▸'}</span>
+      </button>
+      ${t.length ? `<div class="bar" style="margin-top:2px"><i style="width:${pct}%;background:${m.c}"></i></div>` : ''}
+      ${open ? `<div class="mat-body">${bloqueRev(k,1)}${bloqueRev(k,2)}${bloqueCtrl(k)}</div>` : ''}
     </div>`;
   }).join('') + '</div>';
 
@@ -668,11 +870,11 @@ function pintar(){
   const lun = new Date(HOY); lun.setDate(HOY.getDate() - idxHoy);
   const dom = new Date(lun);  dom.setDate(lun.getDate() + 6);
   const f = d => d.getDate() + '/' + (d.getMonth()+1);
-  $('#rango').textContent = 'Semana del ' + f(lun) + ' al ' + f(dom) + ' · ' + porcentaje() + '% hecho';
+  $('#rango').textContent = 'Semana del ' + f(lun) + ' al ' + f(dom) + ' · hiciste el ' + porcentaje() + '% de esta semana';
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-v],#b-exp,#b-imp,#b-reset,#btn-tema');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],#b-exp,#b-imp,#b-reset,#btn-tema');
   if(!t) return;
 
   if(t.dataset.v){
@@ -686,6 +888,8 @@ document.addEventListener('click', ev => {
     document.documentElement.dataset.theme = n;
     t.textContent = n === 'night' ? '☀️' : '🌙';
     rawSet(KEY + '-tema', n);
+    const mc = document.getElementById('meta-color');
+    if(mc) mc.content = (n === 'night') ? '#241B33' : '#FFF7FB';
     return;
   }
   if(t.dataset.b){
@@ -708,7 +912,20 @@ document.addEventListener('click', ev => {
     const [k, j] = t.dataset.del.split('|');
     db.temario[k].splice(+j, 1); save(); renderMaterias(); return;
   }
+  if(t.dataset.acc){
+    abierta = (abierta === t.dataset.acc) ? null : t.dataset.acc;
+    renderMaterias(); return;
+  }
   if(t.dataset.addbtn){ agregar(t.dataset.addbtn); return; }
+  if(t.dataset.caddbtn){ agregarCtrl(t.dataset.caddbtn); return; }
+  if(t.dataset.ctrl){
+    const [k, j] = t.dataset.ctrl.split('|');
+    ctrls(k)[+j].ok = !ctrls(k)[+j].ok; save(); renderMaterias(); return;
+  }
+  if(t.dataset.cdel){
+    const [k, j] = t.dataset.cdel.split('|');
+    ctrls(k).splice(+j, 1); save(); renderMaterias(); return;
+  }
 
   if(t.id === 'b-exp'){ $('#codigo').value = btoa(unescape(encodeURIComponent(JSON.stringify(db)))); $('#codigo').select(); return; }
   if(t.id === 'b-imp'){
@@ -726,30 +943,54 @@ document.addEventListener('click', ev => {
   }
 });
 
-function agregar(k){
-  const inp = document.querySelector('[data-add="' + k + '"]');
+function agregar(ref){
+  const inp = document.querySelector('[data-add="' + ref + '"]');
+  if(!inp) return;
   const v = inp.value.trim();
   if(!v) return;
-  if(!db.temario[k]) db.temario[k] = [];
-  db.temario[k].push({t:v, ok:false});
+  const [k, rn] = ref.split('|');
+  unis(k).push({t:v, ok:false, r:+rn});
   save(); renderMaterias();
-  const nuevo = document.querySelector('[data-add="' + k + '"]');
+  const nuevo = document.querySelector('[data-add="' + ref + '"]');
+  if(nuevo) nuevo.focus();
+}
+
+function agregarCtrl(k){
+  const it = document.querySelector('[data-cadd-t="' + k + '"]');
+  const iff = document.querySelector('[data-cadd-f="' + k + '"]');
+  const v = it.value.trim();
+  if(!v && !iff.value) return;
+  ctrls(k).push({t: v || 'Control', f: iff.value, ok:false});
+  ctrls(k).sort((a,b) => (a.f||'9999').localeCompare(b.f||'9999'));
+  save(); renderMaterias();
+  const nuevo = document.querySelector('[data-cadd-t="' + k + '"]');
   if(nuevo) nuevo.focus();
 }
 
 document.addEventListener('keydown', ev => {
-  if(ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.add) agregar(ev.target.dataset.add);
+  if(ev.key !== 'Enter' || !ev.target.dataset) return;
+  if(ev.target.dataset.add)   agregar(ev.target.dataset.add);
+  if(ev.target.dataset.caddT) agregarCtrl(ev.target.dataset.caddT);
 });
 document.addEventListener('change', ev => {
-  const k = ev.target.dataset ? ev.target.dataset.revFecha : null;
-  if(k){ db.revision[k] = ev.target.value; save(); renderMaterias(); }
+  const ref = ev.target.dataset ? ev.target.dataset.revFecha : null;
+  if(ref){
+    const [k, rn] = ref.split('|');
+    rev(k)[rn] = ev.target.value; save(); renderMaterias();
+  }
 });
 
 /* arranque */
 const tema = raw(KEY + '-tema');
 if(tema === 'night'){ document.documentElement.dataset.theme = 'night'; $('#btn-tema').textContent = '☀️'; }
 pintar();
+pintarEstado();
+if(SYNC.url){ bajar(true); setInterval(() => bajar(false), 10000); }
 setInterval(() => { renderHoy(); }, 60000);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>
