@@ -268,6 +268,47 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .ag-item .muted{flex:1;font-size:11.5px;font-weight:600;white-space:nowrap}
 .ag-item .cuenta{flex:none}
 
+/* ---------- edición ---------- */
+.icon-btn.on{background:var(--lav);color:#fff}
+.bloque{cursor:pointer}
+.nota-lin{display:block;font-size:12px;font-weight:700;color:var(--lav);margin-top:4px;white-space:pre-wrap}
+.bq-ico{flex:none;align-self:center;font-size:13px;opacity:.4;padding:5px 6px;line-height:1;border-radius:9px}
+.bq-ico.on{opacity:1}
+.bq-ico:active{transform:scale(.9)}
+.lapiz{font-size:13px;opacity:.65;padding:3px 6px;line-height:1;border-radius:9px}
+.btn.mini{padding:8px 14px;font-size:12.5px;border-radius:13px;box-shadow:none;border:2px dashed var(--line);color:var(--soft);width:100%;margin-top:2px}
+.aviso-edit{
+  display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;color:#fff;
+  background:linear-gradient(120deg,var(--lav),var(--rosa));border-radius:16px;padding:11px 14px;margin-bottom:14px;
+}
+.edit-on .bloque,.edit-on .meta{box-shadow:0 0 0 2px var(--lav) inset}
+
+/* ---------- hoja de edición ---------- */
+.hoja{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.hoja-bg{position:absolute;inset:0;background:rgba(62,42,84,.45)}
+.hoja-in{
+  position:relative;width:100%;max-width:470px;max-height:88vh;overflow:auto;
+  background:var(--card);border-radius:26px 26px 0 0;
+  padding:18px 18px calc(20px + env(safe-area-inset-bottom));
+  box-shadow:0 -10px 34px rgba(120,80,150,.3);
+}
+.hoja-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.hoja-head h3{font-size:17px;flex:1;min-width:0}
+.campo{margin-bottom:11px}
+.campo label{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin-bottom:5px}
+.campo input,.campo select,.campo textarea{
+  width:100%;border:2px solid var(--line);background:var(--card2);border-radius:13px;
+  padding:10px 11px;font-size:14.5px;font-weight:600;
+}
+.campo textarea{min-height:64px;resize:vertical;line-height:1.45}
+.dos{display:flex;gap:9px}
+.dos .campo{flex:1;min-width:0}
+.pista{font-size:11.5px;color:var(--soft);font-weight:600;margin:-4px 0 12px}
+@media(min-width:720px){
+  .hoja{align-items:center}
+  .hoja-in{border-radius:26px;margin:0 16px}
+}
+
 .hidden{display:none}
 @media(min-width:860px){
   body{padding-bottom:24px}
@@ -296,6 +337,7 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
     </div>
     <div class="spacer"></div>
     <span id="sync-luz" style="font-size:17px;opacity:.85"></span>
+    <button class="icon-btn" id="btn-edit" title="Editar la rutina">✏️</button>
     <button class="icon-btn" id="btn-tema" title="Modo noche">🌙</button>
   </header>
 
@@ -314,6 +356,8 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
   </main>
 </div>
 
+<div id="hoja" class="hoja hidden"></div>
+
 <script>
 /* =========================================================
    1. DATOS  ·  editá acá si cambia tu rutina
@@ -331,7 +375,7 @@ const MAT = {
   rev:    {n:'Revisión semanal',     e:'🗓️', c:'#F09BCF'}
 };
 
-const DIAS = [
+const DIAS_BASE = [
   {id:'lun', n:'Lunes', e:'🌷', foco:'AYGO II + dejar Derecho al día', bloques:[
     {i:'12:00', f:'14:00', m:'der',    t:'Clase',              d:'Durante el trabajo'},
     {i:'19:00', f:'21:00', m:'aygo',   t:'Clase',              d:'Resumen en paralelo'},
@@ -383,7 +427,7 @@ let mem = {};
 function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?? null; } }
 function rawSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 
-const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, ts:0};
+const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, rutina:null, ts:0};
 let db = (()=>{ try{ return Object.assign({}, DB_BASE, JSON.parse(raw(KEY)||'{}')); }catch(e){ return {...DB_BASE}; } })();
 function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPronto(); }
 
@@ -397,6 +441,48 @@ function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPront
   });
   if(!db.controles) db.controles = {};
 })();
+
+/* =========================================================
+   2a. RUTINA EDITABLE
+   La rutina deja de estar clavada en el código: vive en el
+   guardado, así la podés cambiar desde el celu o la compu.
+   ========================================================= */
+let DIAS = [];
+
+function clon(x){ return JSON.parse(JSON.stringify(x)); }
+function nuevoId(pre){ return pre + '-' + Math.random().toString(36).slice(2, 7); }
+function aMin(h){ return (+h.slice(0,2)) * 60 + (+h.slice(3,5)); }
+
+function semillaRutina(){
+  const r = clon(DIAS_BASE);
+  /* los ids arrancan iguales a los de antes para no perder los tildes ya puestos */
+  r.forEach(d => (d.bloques || []).forEach((b, j) => { b.k = d.id + '-' + j; }));
+  return r;
+}
+
+function ordenarDia(d){
+  if(!d.bloques) return;
+  d.bloques.sort((a, b) => (a.i ? aMin(a.i) : -1) - (b.i ? aMin(b.i) : -1));
+}
+
+function normalizarRutina(){
+  if(!Array.isArray(db.rutina) || db.rutina.length !== 7) db.rutina = semillaRutina();
+  db.rutina.forEach(d => {
+    if(d.flex){
+      if(!Array.isArray(d.metas)) d.metas = [];
+      d.metas.forEach(mt => {
+        if(!Array.isArray(mt.tareas)) mt.tareas = [];
+        mt.min = Math.max(15, +mt.min || 60);
+      });
+    } else {
+      if(!Array.isArray(d.bloques)) d.bloques = [];
+      d.bloques.forEach(b => { if(!b.k) b.k = nuevoId(d.id); });
+      ordenarDia(d);
+    }
+  });
+  DIAS = db.rutina;
+}
+normalizarRutina();
 
 function claveSemana(d){
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -455,6 +541,7 @@ function subir(){
 }
 function bajar(primera){
   if(!SYNC.url) return;
+  if(typeof hojaCtx !== 'undefined' && hojaCtx) return;   // no pisar nada mientras estás editando
   fetch(nodo())
     .then(r => r.json())
     .then(remoto => {
@@ -462,8 +549,9 @@ function bajar(primera){
       if(remoto && remoto.semanas){
         if((remoto.ts||0) > (db.ts||0)){
           db = Object.assign({}, DB_BASE, remoto);
+          normalizarRutina();
           rawSet(KEY, JSON.stringify(db));
-          pintar();
+          if(!hojaCtx) pintar();
         } else if(primera && (db.ts||0) > (remoto.ts||0)){
           subir();
         }
@@ -483,7 +571,15 @@ const hhmm = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).
 const dur  = b => (b.i && b.f) ? mins(b.f) - mins(b.i) : 30;
 const hs   = m => m < 60 ? m + "'" : (m % 60 === 0 ? (m/60) + ' h' : Math.floor(m/60) + ' h ' + (m%60) + "'");
 const esc  = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const bid  = (d,j) => d.id + '-' + j;
+const bid  = (d,j,b) => (b && b.k) ? b.k : d.id + '-' + j;
+
+/* nombre / ícono / color de un bloque o meta (puede ser una materia o algo escrito por vos) */
+const PALETA = [['#FF8FB8','Rosa'],['#B196EE','Lavanda'],['#6FD3B7','Menta'],
+                ['#F5B75C','Miel'],['#7FB4F0','Celeste'],['#CE9AEA','Lila'],['#9FB3C8','Gris']];
+function matB(x){
+  if(x && x.nm) return {n:x.nm, e:x.e || '📌', c:x.c || '#BCAEDC'};
+  return MAT[x && x.m] || {n:'Otra cosa', e:'📌', c:'#BCAEDC'};
+}
 
 function ahoraMin(){ const n = new Date(); return n.getHours()*60 + n.getMinutes(); }
 
@@ -502,8 +598,9 @@ function balance(k){
     } else {
       d.bloques.forEach((b,j) => {
         if(b.pausa) return;
-        plan[b.m] = (plan[b.m]||0) + dur(b);
-        if(s.check[bid(d,j)]) hecho[b.m] = (hecho[b.m]||0) + dur(b);
+        const mk = b.m || 'otro';
+        plan[mk] = (plan[mk]||0) + dur(b);
+        if(s.check[bid(d,j,b)]) hecho[mk] = (hecho[mk]||0) + dur(b);
       });
     }
   });
@@ -518,7 +615,8 @@ function porcentaje(k){
 function diaCompleto(d){
   const s = sem();
   if(d.flex) return d.metas.every(mt => (s.min[d.id+'-'+mt.m]||0) >= mt.min);
-  return d.bloques.every((b,j) => b.pausa || s.check[bid(d,j)]);
+  if(!d.bloques.length) return false;
+  return d.bloques.every((b,j) => b.pausa || s.check[bid(d,j,b)]);
 }
 
 /* =========================================================
@@ -545,7 +643,7 @@ function renderHoy(){
   const act = bloqueActual();
   let hero;
   if(act){
-    const m = MAT[act.b.m];
+    const m = matB(act.b);
     const a = ahoraMin();
     if(act.estado === 'ahora'){
       const pct = Math.round((a - mins(act.b.i)) / dur(act.b) * 100);
@@ -564,7 +662,7 @@ function renderHoy(){
     }
   } else {
     const pend = d.flex
-      ? d.metas.filter(mt => metaMin(d,mt.m) < mt.min).map(mt => MAT[mt.m].n).join(' y ')
+      ? d.metas.filter(mt => metaMin(d,mt.m) < mt.min).map(mt => matB(mt).n).join(' y ')
       : '';
     hero = `<div class="now">
       <div class="eyebrow">${d.e} ${esc(d.n)}</div>
@@ -572,7 +670,7 @@ function renderHoy(){
       <p>${d.flex ? esc(d.foco) : 'No quedan bloques con horario por hoy'}</p>
     </div>`;
   }
-  $('#v-hoy').innerHTML = hero + `<div class="card">${cardDia(d, true)}</div>`;
+  $('#v-hoy').innerHTML = (editando ? AVISO : '') + hero + `<div class="card">${cardDia(d, true)}</div>`;
 }
 
 /* =========================================================
@@ -582,13 +680,14 @@ function cardDia(d, solo){
   const completo = diaCompleto(d);
   let h = `<div class="dia-head">
       <h3>${d.e} ${esc(d.n)}</h3>
+      ${editando ? `<button class="lapiz" data-dedit="${d.id}" title="Editar el día">✏️</button>` : ''}
       <span class="pill ${completo?'full':''}">${completo ? '¡completo! ✨' : (d.flex ? 'a tu ritmo' : 'con horario')}</span>
     </div>
-    <p class="foco">Foco: <b>${esc(d.foco)}</b></p>`;
+    ${d.foco ? `<p class="foco">Foco: <b>${esc(d.foco)}</b></p>` : '<p class="foco"></p>'}`;
 
   if(d.flex){
-    d.metas.forEach(mt => {
-      const m = MAT[mt.m], hechos = metaMin(d, mt.m);
+    d.metas.forEach((mt, j) => {
+      const m = matB(mt), hechos = metaMin(d, mt.m);
       const pct = Math.min(100, Math.round(hechos/mt.min*100));
       h += `<div class="meta" style="border-left-color:${m.c}">
         <div class="mtop">
@@ -603,6 +702,11 @@ function cardDia(d, solo){
           <button data-meta="${d.id}|${mt.m}|0">reset</button>
         </div>
         ${mt.tareas.length ? '<ul>' + mt.tareas.map(t=>`<li>${esc(t)}</li>`).join('') + '</ul>' : ''}
+        ${mt.nota ? `<span class="nota-lin">📝 ${esc(mt.nota)}</span>` : ''}
+        ${editando ? `<div class="plusminus" style="margin-top:9px">
+            <button data-medit="${d.id}|${j}">✏️ Editar</button>
+            <button data-mdel="${d.id}|${j}">🗑️ Borrar</button>
+          </div>` : ''}
         ${mt.checklist ? mt.checklist.map((t,k)=>{
           const on = sem().check[d.id+'-rev-'+k];
           return `<button class="mini-check ${on?'done':''}" data-rev="${d.id}-rev-${k}">
@@ -610,7 +714,9 @@ function cardDia(d, solo){
         }).join('') : ''}
       </div>`;
     });
+    if(!d.metas.length) h += '<p class="vacio">Sin metas todavía</p>';
     if(d.nota) h += `<p class="foco" style="margin:2px 0 0">${esc(d.nota)}</p>`;
+    if(editando) h += `<button class="btn mini" data-madd="${d.id}">＋ Agregar meta</button>`;
     return h;
   }
 
@@ -621,33 +727,44 @@ function cardDia(d, solo){
       h += `<div class="hueco">· · · ${hs(mins(b.i)-prevFin)} · · ·</div>`;
     }
     if(b.pausa){
-      h += `<div class="hueco" style="height:26px">☕ ${b.i} · ${esc(b.t)}</div>`;
-      prevFin = mins(b.f);
+      h += `<div class="hueco" style="height:auto;padding:3px 0;gap:6px">☕ ${b.i||''} · ${esc(b.t)}
+        ${editando ? `<button class="lapiz" data-bedit="${d.id}|${j}">✏️</button>
+                      <button class="lapiz" data-bdel="${d.id}|${j}">🗑️</button>` : ''}</div>`;
+      if(b.f) prevFin = mins(b.f);
       return;
     }
-    const m = MAT[b.m], on = sem().check[bid(d,j)];
+    const m = matB(b), on = sem().check[bid(d,j,b)];
     const esHoy = (DIAS[idxHoy].id === d.id);
     const act = esHoy && b.i && ahoraMin() >= mins(b.i) && ahoraMin() < mins(b.f);
-    h += `<button class="bloque ${on?'done':''} ${act?'ahora':''}" data-b="${bid(d,j)}" style="border-left-color:${m.c}">
+    h += `<div class="bloque ${on?'done':''} ${act?'ahora':''}" role="button" tabindex="0"
+            data-b="${bid(d,j,b)}" data-bj="${d.id}|${j}" style="border-left-color:${m.c}">
       <span class="hora">${b.i ? b.i : 'antes'}${b.f ? '<small>'+b.f+'</small>' : '<small>19:00</small>'}</span>
       <span class="tick">✓</span>
       <span class="tx">
         <b>${m.e} ${esc(m.n)}</b>
         <span>${esc(b.t)}${b.d ? ' · ' + esc(b.d) : ''}</span>
+        ${b.nota ? `<span class="nota-lin">📝 ${esc(b.nota)}</span>` : ''}
       </span>
       ${act ? '<span class="flag">ahora</span>' : ''}
-    </button>`;
+      ${editando
+          ? `<button class="bq-ico on" data-bdel="${d.id}|${j}" title="Borrar">🗑️</button>`
+          : `<button class="bq-ico ${b.nota?'on':''}" data-nota="${d.id}|${j}" title="Nota">📝</button>`}
+    </div>`;
     if(b.f) prevFin = mins(b.f);
   });
+  if(!d.bloques.length) h += '<p class="vacio">Este día está vacío</p>';
   h += '</div>';
+  if(editando) h += `<button class="btn mini" data-badd="${d.id}">＋ Agregar bloque</button>`;
   return h;
 }
 
 /* =========================================================
    6. VISTA · SEMANA
    ========================================================= */
+const AVISO = `<div class="aviso-edit">✏️<span>Modo edición: tocá un bloque para cambiarlo, o usá ＋ para agregar. Los bloques se acomodan solos por hora.</span></div>`;
+
 function renderSemana(){
-  $('#v-semana').innerHTML = '<div class="grid">' +
+  $('#v-semana').innerHTML = (editando ? AVISO : '') + '<div class="grid">' +
     DIAS.map((d,i) => `<div class="card" style="${i===idxHoy?'box-shadow:0 0 0 2.5px var(--rosa),var(--shadow)':''}">${cardDia(d)}</div>`).join('') +
     '</div>';
 }
@@ -859,9 +976,205 @@ function renderProgreso(){
       <button class="btn" id="b-imp">Cargar código</button>
       <button class="btn ghost" id="b-reset">Reiniciar esta semana</button>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Tu rutina</div>
+    <p class="foco" style="margin:6px 0 10px">Tocá el ✏️ de arriba para agregar, cambiar o borrar bloques de cualquier día.</p>
+    <div class="btn-row">
+      <button class="btn ghost" id="b-rutina">Volver a la rutina original</button>
+    </div>
   </div>`;
 
   $('#v-progreso').innerHTML = h;
+}
+
+
+/* =========================================================
+   8b. EDITOR DE LA RUTINA
+   ========================================================= */
+let editando = false;
+let hojaCtx  = null;
+
+function abrirHoja(titulo, cuerpo, ctx){
+  hojaCtx = ctx;
+  $('#hoja').innerHTML = `<div class="hoja-bg" data-hcerrar="1"></div>
+    <div class="hoja-in">
+      <div class="hoja-head">
+        <h3>${esc(titulo)}</h3>
+        <button class="icon-btn" data-hcerrar="1">✕</button>
+      </div>
+      ${cuerpo}
+      <div class="btn-row">
+        <button class="btn pri" data-hok="1">Guardar</button>
+        <button class="btn ghost" data-hcerrar="1">Cancelar</button>
+      </div>
+    </div>`;
+  $('#hoja').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarHoja(){
+  $('#hoja').classList.add('hidden');
+  $('#hoja').innerHTML = '';
+  hojaCtx = null;
+  document.body.style.overflow = '';
+}
+function guardarRutina(d){
+  if(d) ordenarDia(d);
+  save(); pintar();
+}
+const dia = id => DIAS.find(x => x.id === id);
+
+function optsMat(sel){
+  return Object.keys(MAT).map(k =>
+      `<option value="${k}" ${k===sel?'selected':''}>${MAT[k].e} ${esc(MAT[k].n)}</option>`).join('')
+    + `<option value="otro" ${sel==='otro'?'selected':''}>📌 Otra cosa (la escribís vos)</option>`;
+}
+function optsColor(sel){
+  return PALETA.map(([c,n]) => `<option value="${c}" ${c===sel?'selected':''}>${n}</option>`).join('');
+}
+function campoOtro(x, visible){
+  return `<div id="f-otro" class="${visible?'':'hidden'}">
+    <div class="dos">
+      <div class="campo" style="flex:0 0 86px"><label>Ícono</label>
+        <input id="f-e" value="${esc((x&&x.e)||'📌')}" maxlength="4"></div>
+      <div class="campo"><label>Nombre</label>
+        <input id="f-nm" value="${esc((x&&x.nm)||'')}" placeholder="Ej: Gimnasio"></div>
+    </div>
+    <div class="campo"><label>Color</label>
+      <select id="f-c">${optsColor((x&&x.c)||'#B196EE')}</select></div>
+  </div>`;
+}
+function leerMat(destino){
+  const k = $('#f-mat').value;
+  if(k === 'otro'){
+    destino.m  = 'otro';
+    destino.nm = $('#f-nm').value.trim() || 'Otra cosa';
+    destino.e  = $('#f-e').value.trim() || '📌';
+    destino.c  = $('#f-c').value;
+  } else {
+    destino.m = k;
+    delete destino.nm; delete destino.e; delete destino.c;
+  }
+}
+
+/* ---------- bloque con horario ---------- */
+function editarBloque(diaId, j){
+  const d = dia(diaId); if(!d) return;
+  const nuevo = j < 0;
+  const b = nuevo ? {i:'19:00', f:'20:00', m:'gg1', t:'', d:'', nota:''} : d.bloques[j];
+  if(!b) return;
+  const tipo = b.pausa ? 'pausa' : (b.i ? 'hora' : 'libre');
+
+  abrirHoja((nuevo ? 'Nuevo bloque · ' : 'Editar · ') + d.n, `
+    <div class="campo"><label>Materia</label>
+      <select id="f-mat">${optsMat(b.nm ? 'otro' : b.m)}</select></div>
+    ${campoOtro(b, !!b.nm)}
+    <div class="campo"><label>Tipo</label>
+      <select id="f-tipo">
+        <option value="hora"  ${tipo==='hora' ?'selected':''}>Con horario</option>
+        <option value="libre" ${tipo==='libre'?'selected':''}>Sin hora fija</option>
+        <option value="pausa" ${tipo==='pausa'?'selected':''}>Pausa / descanso</option>
+      </select></div>
+    <div class="dos ${tipo==='libre'?'hidden':''}" id="f-horas">
+      <div class="campo"><label>Empieza</label><input type="time" id="f-i" value="${b.i||'19:00'}"></div>
+      <div class="campo"><label>Termina</label><input type="time" id="f-f" value="${b.f||'20:00'}"></div>
+    </div>
+    <div class="campo"><label>Qué hacés</label>
+      <input id="f-t" value="${esc(b.t||'')}" placeholder="Ej: Clase"></div>
+    <div class="campo"><label>Detalle (opcional)</label>
+      <input id="f-d" value="${esc(b.d||'')}" placeholder="Ej: Resumen en paralelo"></div>
+    <div class="campo"><label>Nota (opcional)</label>
+      <textarea id="f-nota" placeholder="Lo que quieras acordarte">${esc(b.nota||'')}</textarea></div>
+  `, {
+    ok(){
+      const tp = $('#f-tipo').value;
+      const nb = {k: nuevo ? nuevoId(d.id) : b.k};
+      leerMat(nb);
+      if(tp === 'pausa'){ nb.pausa = true; nb.m = 'margen'; }
+      if(tp === 'libre'){ nb.libre = true; }
+      if(tp !== 'libre'){
+        const i = $('#f-i').value, f = $('#f-f').value;
+        if(!i || !f){ alert('Poné hora de inicio y de fin.'); return false; }
+        if(mins(f) <= mins(i)){ alert('La hora de fin tiene que ser más tarde que la de inicio.'); return false; }
+        nb.i = i; nb.f = f;
+      }
+      nb.t    = $('#f-t').value.trim() || (tp === 'pausa' ? 'Descanso' : 'Estudiar');
+      nb.d    = $('#f-d').value.trim();
+      nb.nota = $('#f-nota').value.trim();
+      if(nuevo) d.bloques.push(nb); else d.bloques[j] = nb;
+      guardarRutina(d);
+    }
+  });
+}
+
+/* ---------- solo la nota, sin entrar a editar ---------- */
+function editarNota(diaId, j){
+  const d = dia(diaId); if(!d) return;
+  const b = d.bloques[j]; if(!b) return;
+  const m = matB(b);
+  abrirHoja('Nota · ' + m.n, `
+    <p class="pista">${esc(b.t || '')}${b.i ? ' · ' + b.i : ''}</p>
+    <div class="campo"><label>Tu nota</label>
+      <textarea id="f-nota" placeholder="Ej: llevar la calculadora / arranca en el capítulo 4">${esc(b.nota||'')}</textarea></div>
+  `, {
+    ok(){ b.nota = $('#f-nota').value.trim(); guardarRutina(null); }
+  });
+}
+
+/* ---------- meta de día flexible ---------- */
+function editarMeta(diaId, j){
+  const d = dia(diaId); if(!d) return;
+  const nuevo = j < 0;
+  const mt = nuevo ? {m:'gg1', min:60, tareas:[]} : d.metas[j];
+  if(!mt) return;
+  abrirHoja((nuevo ? 'Nueva meta · ' : 'Editar meta · ') + d.n, `
+    <div class="campo"><label>Materia</label>
+      <select id="f-mat">${optsMat(mt.nm ? 'otro' : mt.m)}</select></div>
+    ${campoOtro(mt, !!mt.nm)}
+    <div class="campo"><label>Minutos que querés hacer</label>
+      <input type="number" id="f-min" min="15" step="15" value="${+mt.min || 60}"></div>
+    <div class="campo"><label>Tareas (una por línea)</label>
+      <textarea id="f-tareas" placeholder="Continuar el manual&#10;Resolver ejercicios">${esc((mt.tareas||[]).join('\n'))}</textarea></div>
+    <div class="campo"><label>Checklist con tildes (una por línea, opcional)</label>
+      <textarea id="f-check" placeholder="Ver qué quedó pendiente">${esc((mt.checklist||[]).join('\n'))}</textarea></div>
+    <div class="campo"><label>Nota (opcional)</label>
+      <textarea id="f-nota">${esc(mt.nota||'')}</textarea></div>
+  `, {
+    ok(){
+      const nm = {};
+      leerMat(nm);
+      const choque = d.metas.some((o, k) => k !== j && (o.m || '') === nm.m && (o.nm || '') === (nm.nm || ''));
+      if(choque){ alert('Ya hay una meta de esa materia en este día. Cambiale los minutos a la que ya está.'); return false; }
+      nm.min = Math.max(15, +$('#f-min').value || 60);
+      nm.tareas = $('#f-tareas').value.split('\n').map(x => x.trim()).filter(Boolean);
+      const ch = $('#f-check').value.split('\n').map(x => x.trim()).filter(Boolean);
+      if(ch.length) nm.checklist = ch;
+      nm.nota = $('#f-nota').value.trim();
+      if(nuevo) d.metas.push(nm); else d.metas[j] = nm;
+      guardarRutina(null);
+    }
+  });
+}
+
+/* ---------- el día en sí ---------- */
+function editarDia(diaId){
+  const d = dia(diaId); if(!d) return;
+  abrirHoja('Editar ' + d.n, `
+    <div class="campo"><label>Ícono del día</label>
+      <input id="f-e" value="${esc(d.e||'🌷')}" maxlength="4"></div>
+    <div class="campo"><label>Foco del día</label>
+      <input id="f-foco" value="${esc(d.foco||'')}" placeholder="Ej: AYGO II + GG1"></div>
+    <div class="campo"><label>Nota al pie (opcional)</label>
+      <textarea id="f-nota">${esc(d.nota||'')}</textarea></div>
+  `, {
+    ok(){
+      d.e = $('#f-e').value.trim() || '🌷';
+      d.foco = $('#f-foco').value.trim();
+      d.nota = $('#f-nota').value.trim();
+      guardarRutina(null);
+    }
+  });
 }
 
 /* =========================================================
@@ -876,8 +1189,45 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],#b-exp,#b-imp,#b-reset,#btn-tema');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit');
   if(!t) return;
+
+  /* --- hoja de edición --- */
+  if(t.dataset.hcerrar){ cerrarHoja(); return; }
+  if(t.dataset.hok){
+    if(hojaCtx && hojaCtx.ok() === false) return;
+    cerrarHoja(); return;
+  }
+  if(t.id === 'btn-edit'){
+    editando = !editando;
+    t.classList.toggle('on', editando);
+    document.body.classList.toggle('edit-on', editando);
+    pintar(); return;
+  }
+  if(t.dataset.nota){ const [d0,j0] = t.dataset.nota.split('|'); editarNota(d0, +j0); return; }
+  if(t.dataset.bedit){ const [d0,j0] = t.dataset.bedit.split('|'); editarBloque(d0, +j0); return; }
+  if(t.dataset.badd){ editarBloque(t.dataset.badd, -1); return; }
+  if(t.dataset.bdel){
+    const [d0,j0] = t.dataset.bdel.split('|');
+    const d = dia(d0); if(!d) return;
+    const b = d.bloques[+j0];
+    if(b && confirm('¿Borrar "' + (b.t || 'este bloque') + '" del ' + d.n + '?')){
+      d.bloques.splice(+j0, 1); guardarRutina(null);
+    }
+    return;
+  }
+  if(t.dataset.dedit){ editarDia(t.dataset.dedit); return; }
+  if(t.dataset.medit){ const [d0,j0] = t.dataset.medit.split('|'); editarMeta(d0, +j0); return; }
+  if(t.dataset.madd){ editarMeta(t.dataset.madd, -1); return; }
+  if(t.dataset.mdel){
+    const [d0,j0] = t.dataset.mdel.split('|');
+    const d = dia(d0); if(!d) return;
+    const mt = d.metas[+j0];
+    if(mt && confirm('¿Borrar la meta de ' + matB(mt).n + ' del ' + d.n + '?')){
+      d.metas.splice(+j0, 1); guardarRutina(null);
+    }
+    return;
+  }
 
   if(t.dataset.v){
     document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b === t));
@@ -895,6 +1245,9 @@ document.addEventListener('click', ev => {
     return;
   }
   if(t.dataset.b){
+    if(editando && t.dataset.bj){
+      const [d0,j0] = t.dataset.bj.split('|'); editarBloque(d0, +j0); return;
+    }
     const s = sem(); s.check[t.dataset.b] = !s.check[t.dataset.b]; save(); pintar(); return;
   }
   if(t.dataset.rev){
@@ -933,8 +1286,14 @@ document.addEventListener('click', ev => {
   if(t.id === 'b-imp'){
     try{
       db = Object.assign({}, DB_BASE, JSON.parse(decodeURIComponent(escape(atob($('#codigo').value.trim())))));
-      save(); pintar();
+      normalizarRutina(); save(); pintar();
     }catch(e){ alert('Ese código no se pudo leer. Copialo entero e intentá de nuevo.'); }
+    return;
+  }
+  if(t.id === 'b-rutina'){
+    if(confirm('¿Volver a la rutina original? Se pierden los cambios que hiciste en los días. Los tildes y el temario no se tocan.')){
+      db.rutina = null; normalizarRutina(); save(); pintar();
+    }
     return;
   }
   if(t.id === 'b-reset'){
@@ -970,11 +1329,18 @@ function agregarCtrl(k){
 }
 
 document.addEventListener('keydown', ev => {
+  if(ev.key === 'Escape' && hojaCtx){ cerrarHoja(); return; }
   if(ev.key !== 'Enter' || !ev.target.dataset) return;
   if(ev.target.dataset.add)   agregar(ev.target.dataset.add);
   if(ev.target.dataset.caddT) agregarCtrl(ev.target.dataset.caddT);
 });
 document.addEventListener('change', ev => {
+  if(ev.target.id === 'f-mat'){
+    const o = $('#f-otro'); if(o) o.classList.toggle('hidden', ev.target.value !== 'otro');
+  }
+  if(ev.target.id === 'f-tipo'){
+    const o = $('#f-horas'); if(o) o.classList.toggle('hidden', ev.target.value === 'libre');
+  }
   const ref = ev.target.dataset ? ev.target.dataset.revFecha : null;
   if(ref){
     const [k, rn] = ref.split('|');
@@ -988,7 +1354,7 @@ if(tema === 'night'){ document.documentElement.dataset.theme = 'night'; $('#btn-
 pintar();
 pintarEstado();
 if(SYNC.url){ bajar(true); setInterval(() => bajar(false), 10000); }
-setInterval(() => { renderHoy(); }, 60000);
+setInterval(() => { if(!hojaCtx) renderHoy(); }, 60000);
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
