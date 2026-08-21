@@ -314,19 +314,34 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .cal-head b{flex:1;font-size:15.5px;text-transform:capitalize}
 .cal-nav{width:32px;height:32px;border-radius:11px;background:var(--card2);color:var(--soft);font-size:15px;flex:none}
 .cal-nav:active{transform:scale(.92)}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal .dow{text-align:center;font-size:10px;font-weight:800;color:var(--soft);padding:3px 0;text-transform:uppercase;letter-spacing:.04em}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;max-width:560px;margin:0 auto}
+.cal .dow{text-align:center;font-size:9.5px;font-weight:800;color:var(--soft);padding:2px 0;text-transform:uppercase;letter-spacing:.04em}
 .cal-d{
-  aspect-ratio:1;border-radius:11px;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:2px;font-size:12.5px;font-weight:700;color:var(--tinta);
-  background:var(--card2);position:relative;padding:0;
+  min-height:50px;border-radius:10px;display:flex;flex-direction:column;align-items:stretch;
+  justify-content:flex-start;gap:1px;font-weight:700;color:var(--tinta);
+  background:var(--card2);padding:3px 3px 4px;overflow:hidden;
 }
-.cal-d.off{background:transparent;color:transparent;pointer-events:none}
-.cal-d.hoy{background:var(--rosa);color:#fff;box-shadow:0 3px 10px rgba(255,143,184,.4)}
-.cal-d.sel{outline:2px solid var(--lav);outline-offset:-2px}
-.cal-pts{display:flex;gap:2px;height:5px;align-items:center}
-.cal-pts i{width:5px;height:5px;border-radius:50%;display:block}
+.cal-d .num{font-size:11px;text-align:center;line-height:1.2;flex:none}
+.cal-d.off{background:transparent;pointer-events:none}
+.cal-d.hoy{background:var(--rosa);color:#fff}
+.cal-d.hoy .num{color:#fff}
+.cal-d.sel{outline:2.5px solid var(--lav);outline-offset:-2px}
+.cal-ev{
+  display:block;font-size:8px;font-weight:800;line-height:1.5;border-radius:4px;
+  padding:0 3px;margin-top:1px;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;
+}
+.cal-mas{font-size:8px;font-weight:800;color:var(--soft);text-align:center;line-height:1.4}
+.cal-d.hoy .cal-mas{color:#fff}
 .cal-nota{font-size:11.5px;color:var(--soft);font-weight:600;margin:12px 0 0;text-align:center}
+@media(min-width:620px){
+  .cal{max-width:none;gap:5px}
+  .cal .dow{font-size:11px}
+  .cal-d{min-height:76px;border-radius:13px;padding:5px}
+  .cal-d .num{font-size:12.5px;text-align:left;padding-left:2px}
+  .cal-ev{font-size:10px;padding:1px 5px;border-radius:6px;margin-top:2px}
+  .cal-mas{font-size:9.5px;text-align:left;padding-left:3px}
+}
 
 /* ---------- fechas / instancias ---------- */
 .inst{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:15px;background:var(--card2);margin-bottom:7px}
@@ -391,6 +406,23 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .sem-row .bar{flex:1;margin:0}
 .sem-row em{font-style:normal;font-size:12px;font-weight:800;width:42px;text-align:right;flex:none}
 
+/* ---------- materias editables / resumen ---------- */
+.mat-head .lapiz{flex:none}
+.res-uc{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.res-uc .num{font-size:34px}
+.res-uc small{font-size:14px;font-weight:800;color:var(--soft)}
+.mini-est{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;flex:none}
+.mini-est.si{background:#E4F5EE;color:#2F8D6E}
+.mini-est.no{background:#FFE6E9;color:#C9506A}
+.mini-est.qz{background:#FFF3E0;color:#B4762A}
+[data-tema=noche] .mini-est.si{background:#23453A;color:#7FD8B8}
+[data-tema=noche] .mini-est.no{background:#4A2530;color:#FF9DB0}
+[data-tema=noche] .mini-est.qz{background:#453521;color:#F0C07A}
+.sw{display:inline-block;width:26px;height:26px;border-radius:9px;border:3px solid transparent;cursor:pointer}
+.sw.on{border-color:var(--tinta)}
+.sw-row{display:flex;gap:7px;flex-wrap:wrap}
+.brand h1{cursor:default}
+.edit-on .brand h1{cursor:pointer;text-decoration:underline dotted var(--lav) 2px;text-underline-offset:4px}
 .hidden{display:none}
 @media(min-width:860px){
   body{padding-bottom:24px}
@@ -414,19 +446,20 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1><span class="mono"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="mbF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF1F8"/><stop offset="1" stop-color="#EFE5FF"/></linearGradient><linearGradient id="mbL" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#FFB0D0"/><stop offset="1" stop-color="#FF6BA6"/></linearGradient><linearGradient id="mbC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF88B6"/><stop offset="1" stop-color="#EE4D93"/></linearGradient><linearGradient id="mbN" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#FFA3C8"/><stop offset="1" stop-color="#E8478D"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#mbF)"/><g transform="translate(256,262) scale(1.3) translate(-256,-262)"><path d="M236 290 C214 340 186 380 138 430 L188 412 L204 464 C238 406 254 346 258 298 Z" fill="url(#mbC)"/><path d="M276 290 C298 340 326 380 374 430 L324 412 L308 464 C274 406 258 346 254 298 Z" fill="url(#mbC)"/><path d="M250 248 C214 176 112 160 82 208 C54 254 100 312 184 306 C218 304 242 288 252 272 Z" fill="url(#mbL)"/><path d="M262 248 C298 176 400 160 430 208 C458 254 412 312 328 306 C294 304 270 288 260 272 Z" fill="url(#mbL)"/><path d="M256 226 C286 226 302 244 302 266 C302 290 284 306 256 306 C228 306 210 290 210 266 C210 244 226 226 256 226 Z" fill="url(#mbN)"/><ellipse cx="238" cy="248" rx="14" ry="8" fill="#FFFFFF" opacity=".5" transform="rotate(-25 238 248)"/></g></svg></span>Mi semestre</h1>
+      <h1><span class="mono"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="mbF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF1F8"/><stop offset="1" stop-color="#EFE5FF"/></linearGradient><linearGradient id="mbL" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#FFB0D0"/><stop offset="1" stop-color="#FF6BA6"/></linearGradient><linearGradient id="mbC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF88B6"/><stop offset="1" stop-color="#EE4D93"/></linearGradient><linearGradient id="mbN" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#FFA3C8"/><stop offset="1" stop-color="#E8478D"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#mbF)"/><g transform="translate(256,262) scale(1.3) translate(-256,-262)"><path d="M236 290 C214 340 186 380 138 430 L188 412 L204 464 C238 406 254 346 258 298 Z" fill="url(#mbC)"/><path d="M276 290 C298 340 326 380 374 430 L324 412 L308 464 C274 406 258 346 254 298 Z" fill="url(#mbC)"/><path d="M250 248 C214 176 112 160 82 208 C54 254 100 312 184 306 C218 304 242 288 252 272 Z" fill="url(#mbL)"/><path d="M262 248 C298 176 400 160 430 208 C458 254 412 312 328 306 C294 304 270 288 260 272 Z" fill="url(#mbL)"/><path d="M256 226 C286 226 302 244 302 266 C302 290 284 306 256 306 C228 306 210 290 210 266 C210 244 226 226 256 226 Z" fill="url(#mbN)"/><ellipse cx="238" cy="248" rx="14" ry="8" fill="#FFFFFF" opacity=".5" transform="rotate(-25 238 248)"/></g></svg></span><span id="titulo">Mi semestre</span></h1>
       <p id="rango">—</p>
     </div>
     <div class="spacer"></div>
     <span id="sync-luz" style="font-size:17px;opacity:.85"></span>
-    <button class="icon-btn" id="btn-edit" title="Editar la rutina">✏️</button>
+    <button class="icon-btn" id="btn-edit" title="Editar">✏️</button>
     <button class="icon-btn" id="btn-tema" title="Modo noche">🌙</button>
+    <button class="icon-btn" id="btn-desc" title="Descargar respaldo de mis datos">⬇️</button>
   </header>
 
   <nav class="tabs">
     <button data-v="hoy" class="on"><i>🌷</i>Hoy</button>
     <button data-v="semana"><i>🗓️</i>Semana</button>
-    <button data-v="materias"><i>📚</i>Materias</button>
+    <button data-v="materias"><i>📚</i>UC</button>
     <button data-v="fechas"><i>📅</i>Fechas</button>
     <button data-v="notas"><i>💯</i>Notas</button>
     <button data-v="progreso"><i>💗</i>Progreso</button>
@@ -449,7 +482,7 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
    1. DATOS  ·  editá acá si cambia tu rutina
    ========================================================= */
 
-const MAT = {
+const MAT_BASE = {
   gg1:    {n:'GG1',                  e:'🧾', c:'#FF9DBC', prio:1},
   calc:   {n:'Cálculo',              e:'📐', c:'#A98BEE', prio:2},
   aygo:   {n:'AYGO II',              e:'📚', c:'#FF7FB0', prio:3},
@@ -460,6 +493,7 @@ const MAT = {
   margen: {n:'Margen',               e:'🌙', c:'#BCAEDC'},
   rev:    {n:'Revisión semanal',     e:'🗓️', c:'#F09BCF'}
 };
+let MAT = JSON.parse(JSON.stringify(MAT_BASE));
 
 const DIAS_BASE = [
   {id:'lun', n:'Lunes', e:'🌷', foco:'AYGO II + dejar Derecho al día', bloques:[
@@ -513,7 +547,8 @@ let mem = {};
 function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?? null; } }
 function rawSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 
-const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, notas:{}, pend:[], rutina:null, ts:0};
+const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, notas:{},
+                 pend:[], mats:{}, titulo:'Mi semestre', rutina:null, ts:0};
 let db = (()=>{ try{ return Object.assign({}, DB_BASE, JSON.parse(raw(KEY)||'{}')); }catch(e){ return {...DB_BASE}; } })();
 function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPronto(); }
 
@@ -527,6 +562,8 @@ function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPront
   });
   if(!db.controles) db.controles = {};
   if(!db.notas) db.notas = {};
+  if(!db.mats)  db.mats  = {};
+  if(!db.titulo) db.titulo = 'Mi semestre';
   if(!Array.isArray(db.pend)) db.pend = [];
   /* los controles necesitan id propio para poder colgarles la nota */
   Object.keys(db.controles).forEach(k => (db.controles[k]||[]).forEach(c => {
@@ -542,6 +579,16 @@ function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPront
 let DIAS = [];
 
 function clon(x){ return JSON.parse(JSON.stringify(x)); }
+
+/* las materias también son editables: MAT_BASE + lo que vos cambiaste */
+function cargarMats(){
+  MAT = clon(MAT_BASE);
+  const ov = db.mats || {};
+  Object.keys(ov).forEach(k => {
+    if(ov[k] === null || ov[k] === 'BORRADA') delete MAT[k];
+    else MAT[k] = Object.assign(MAT[k] || {}, ov[k]);
+  });
+}
 function nuevoId(pre){ return pre + '-' + Math.random().toString(36).slice(2, 7); }
 function aMin(h){ return (+h.slice(0,2)) * 60 + (+h.slice(3,5)); }
 
@@ -573,6 +620,7 @@ function normalizarRutina(){
     }
   });
   DIAS = db.rutina;
+  cargarMats();
   if(!db.notas) db.notas = {};
   if(!Array.isArray(db.pend)) db.pend = [];
   if(!db.controles) db.controles = {};
@@ -878,7 +926,9 @@ function renderSemana(){
 /* =========================================================
    7. VISTA · MATERIAS (temario + revisión)
    ========================================================= */
-const CURSANDO = Object.keys(MAT).filter(k => MAT[k].prio).sort((a,b) => MAT[a].prio - MAT[b].prio);
+function cursando(){
+  return Object.keys(MAT).filter(k => MAT[k].prio).sort((a,b) => MAT[a].prio - MAT[b].prio);
+}
 const MEDALLA = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣'];
 let abierta = null, abiertaF = null, abiertaN = null, diaSel = null;
 
@@ -907,7 +957,7 @@ function claseUrgencia(d){ return d <= 7 ? 'mal' : (d <= 21 ? 'ojo' : 'bien'); }
 /* todas las fechas del semestre, ordenadas */
 function agenda(){
   const out = [];
-  CURSANDO.forEach(k => {
+  cursando().forEach(k => {
     const r = rev(k);
     if(r.r1) out.push({k, t:'Revisión 1', f:r.r1, d:dias(r.r1)});
     if(r.r2) out.push({k, t:'Revisión 2', f:r.r2, d:dias(r.r2)});
@@ -997,7 +1047,7 @@ function renderMaterias(){
   const {plan} = balance();
   const ag = agenda();
 
-  let h = `<div class="card">
+  let agH = `<div class="card">
     <div class="eyebrow">Lo que viene</div>
     ${ag.length
       ? '<div class="agenda">' + ag.slice(0,6).map(x => {
@@ -1012,7 +1062,7 @@ function renderMaterias(){
       : '<p class="foco" style="margin:6px 0 0">Cargá las fechas de las revisiones y de los controles y te van a aparecer acá, ordenadas por cercanía.</p>'}
   </div>`;
 
-  h += '<div class="acordeon">' + CURSANDO.map(k => {
+  let h = '<div class="acordeon">' + cursando().map(k => {
     const m = MAT[k];
     const t = unis(k);
     const listas = t.filter(u => u.ok).length;
@@ -1021,7 +1071,7 @@ function renderMaterias(){
     const open = abierta === k;
     return `<div class="card mat ${open?'open':''}">
       <button class="mat-head" data-acc="${k}">
-        <span class="rank" style="background:${m.c}33;color:${m.c}">${MEDALLA[m.prio-1]}</span>
+        <span class="rank" style="background:${m.c}33;color:${m.c}">${MEDALLA[m.prio-1] || m.prio}</span>
         <span class="mat-tx">
           <b>${m.e} ${esc(m.n)}</b>
           <span class="muted">${t.length ? listas + '/' + t.length + ' unidades · ' + pct + '%' : 'sin temario'}${prox ? ' · ' + esc(prox.t) + ' ' + cuando(prox.d) : ''}</span>
@@ -1029,10 +1079,21 @@ function renderMaterias(){
         <span class="hrs">${plan[k] ? hs(plan[k]) : '—'}<br><span class="muted">semanal</span></span>
         <span class="chev">${open ? '▾' : '▸'}</span>
       </button>
+      ${editando ? `<div class="btn-row" style="margin-top:9px">
+        <button class="btn ghost mini" data-ucedit="${k}" style="margin:0">✏️ Editar materia</button>
+        <button class="btn ghost mini" data-ucdel="${k}" style="margin:0">🗑️ Quitar</button>
+      </div>` : ''}
       ${t.length ? `<div class="bar" style="margin-top:2px"><i style="width:${pct}%;background:${m.c}"></i></div>` : ''}
       ${open ? `<div class="mat-body">${bloqueRev(k,1)}${bloqueRev(k,2)}${bloqueCtrl(k)}</div>` : ''}
     </div>`;
-  }).join('') + '</div>';
+  }).join('');
+
+  if(editando){
+    h += `<div class="card" style="border:2px dashed var(--lav);background:transparent;box-shadow:none">
+      <button class="btn mini" data-ucadd="1" style="margin:0">＋ Agregar unidad curricular</button>
+    </div>`;
+  }
+  h += '</div>' + agH;
 
   $('#v-materias').innerHTML = h;
 }
@@ -1063,7 +1124,7 @@ function renderProgreso(){
   </div>`;
 
   h += '<div class="card"><div class="eyebrow">Horas por materia</div>';
-  CURSANDO.forEach(k => {
+  cursando().forEach(k => {
     if(!plan[k]) return;
     const m = MAT[k], hh = hecho[k] || 0;
     h += `<div class="hbar">
@@ -1379,22 +1440,48 @@ function cuenta(k){
   return {sum, posible, techo, bajoMin, cargadas, conMax,
           meta:+n.meta, tope:+n.tope, cred:+n.cred};
 }
+const FESTEJO = [
+  '¡Aprobaste! 🎉 Te lo bancaste laburando y estudiando a la vez.',
+  '¡Curso aprobado! ✨ Una menos, y con todo el mérito.',
+  '¡Lo lograste! 🎀 Después de todas esas noches, valió la pena.',
+  '¡Aprobada! 🌷 Esto no fue suerte, fue constancia.'
+];
+const ANIMO = [
+  'Vas a examen, y está bien. Un montón de gente pasa por ahí y sale. Ya conocés la materia, ahora es cuestión de ordenarla. 🌷',
+  'Esta vez toca examen. No borra nada de lo que estudiaste: lo tenés, solo hay que acomodarlo. Vos podés. 🩷',
+  'A examen, entonces. No es un paso atrás, es otra fecha. Y con más tiempo para preparar el temario completo. 💗',
+  'Queda el examen. Trabajás full time y aun así llegaste hasta acá, así que no te midas por este número. 🎀'
+];
+const frase = (lista, k) => lista[[...k].reduce((a,c) => a + c.charCodeAt(0), 0) % lista.length];
+
+/* si la Revisión 1 no llega al mínimo, se va derecho a examen */
+function pierdeEnR1(k){
+  const c1 = cfgIt(k, 'r1');
+  return numOn(c1.nota) && numOn(c1.min) && +c1.nota < +c1.min;
+}
+
 function veredicto(k){
   const c = cuenta(k);
-  if(!c.conMax) return {cl:'qz', txt:'Cargá los puntajes máximos de cada instancia y te digo cómo venís.'};
+  if(!c.conMax) return {cl:'qz', txt:'Cargá los puntajes máximos de cada instancia.'};
+
+  if(pierdeEnR1(k)){
+    const c1 = cfgIt(k, 'r1');
+    return {cl:'no', txt:'Revisión 1: ' + c1.nota + ' de mínimo ' + c1.min +
+      '. No quedás habilitada para la Revisión 2.<br><br>' + frase(ANIMO, k)};
+  }
   if(c.bajoMin.length)
     return {cl:'no', txt:'Quedaste por debajo del mínimo en ' + c.bajoMin.join(' y ') +
-      '. Con ' + c.sum + ' de ' + c.tope + ' puntos, revisá qué te habilita el reglamento.'};
-  if(!c.cargadas) return {cl:'qz', txt:'Todavía no cargaste ninguna nota. Necesitás ' + c.meta +
-      ' de ' + c.tope + ' puntos para ganar el curso.'};
+      '.<br><br>' + frase(ANIMO, k)};
+  if(!c.cargadas)
+    return {cl:'qz', txt:'Necesitás ' + c.meta + ' de ' + c.tope + ' puntos para aprobar.'};
   if(c.sum >= c.meta)
-    return {cl:'si', txt:'¡Curso ganado! Llevás ' + c.sum + ' puntos y necesitabas ' + c.meta +
-      '.' + (c.cred ? ' Son ' + c.cred + ' créditos. 🎀' : '')};
+    return {cl:'si', txt:frase(FESTEJO, k) + '<br><br>' + c.sum + ' de ' + c.tope + ' puntos' +
+      (c.cred ? ' · ' + c.cred + ' créditos' : '') + '.'};
   if(c.techo < c.meta)
-    return {cl:'no', txt:'Con lo que queda por rendir llegás como máximo a ' + c.techo +
-      ' y necesitás ' + c.meta + '. El curso no da, pero podés ir a examen.'};
+    return {cl:'no', txt:'Llegás como máximo a ' + c.techo + ' y necesitás ' + c.meta +
+      '.<br><br>' + frase(ANIMO, k)};
   return {cl:'qz', txt:'Llevás ' + c.sum + ' puntos. Te faltan ' + (c.meta - c.sum) +
-    ' para ganar el curso y todavía hay ' + (c.techo - c.sum) + ' en juego.'};
+    ' y hay ' + (c.techo - c.sum) + ' en juego.'};
 }
 
 /* ---------- pendientes ---------- */
@@ -1407,7 +1494,7 @@ function pendUrgentes(){
 /* ---------- agenda completa para el calendario ---------- */
 function eventos(){
   const out = [];
-  CURSANDO.forEach(k => instancias(k).forEach(x => {
+  cursando().forEach(k => instancias(k).forEach(x => {
     if(x.f) out.push({f:x.f, c:MAT[k].c, k, tipo:x.tipo, t:x.n, x});
   }));
   db.pend.forEach(p => { if(p.f && !p.ok) out.push({f:p.f, c:'#B196EE', tipo:'pend', t:p.t, p}); });
@@ -1430,13 +1517,16 @@ function calendario(){
                  '-' + String(HOY.getDate()).padStart(2,'0');
 
   let c = '<div class="cal">' + DOW.map(d => '<span class="dow">' + d + '</span>').join('');
-  for(let i = 0; i < arranque; i++) c += '<button class="cal-d off"></button>';
+  for(let i = 0; i < arranque; i++) c += '<div class="cal-d off"></div>';
   for(let d = 1; d <= total; d++){
     const f = iso(d);
-    const cols = [...new Set(ev.filter(e => e.f === f).map(e => e.c))].slice(0,4);
-    c += `<button class="cal-d ${f === hoyIso ? 'hoy' : ''}" data-cald="${f}">
-      <span>${d}</span>
-      <span class="cal-pts">${cols.map(x => `<i style="background:${f===hoyIso?'#fff':x}"></i>`).join('')}</span>
+    const hay = ev.filter(e => e.f === f);
+    const ver = hay.slice(0, 2);
+    c += `<button class="cal-d ${f === hoyIso ? 'hoy' : ''} ${diaSel === f ? 'sel' : ''}" data-cald="${f}">
+      <span class="num">${d}</span>
+      ${ver.map(e => `<span class="cal-ev" style="background:${e.c}" title="${esc(e.t)}">${
+          (e.tipo === 'pend' ? '📌' : (MAT[e.k] ? MAT[e.k].e : '•')) + ' ' + esc(e.t)}</span>`).join('')}
+      ${hay.length > 2 ? `<span class="cal-mas">+${hay.length - 2} más</span>` : ''}
     </button>`;
   }
   c += '</div>';
@@ -1448,7 +1538,7 @@ function calendario(){
       <button class="cal-nav" data-mes="1">›</button>
     </div>
     ${c}
-    <p class="cal-nota">Los puntitos son revisiones, controles y entregas. Tocá un día para ver qué hay.</p>
+    <p class="cal-nota">Tocá un día para verlo completo, con hora y lugar.</p>
   </div>`;
 }
 
@@ -1484,7 +1574,7 @@ function renderFechas(){
   }
 
   const todo = [];
-  CURSANDO.forEach(k => instancias(k).forEach(x => { if(x.f) todo.push(x); }));
+  cursando().forEach(k => instancias(k).forEach(x => { if(x.f) todo.push(x); }));
   const prox = todo.filter(x => dias(x.f) >= 0).sort((a,b) => a.f < b.f ? -1 : 1);
   const pas  = todo.filter(x => dias(x.f) < 0).sort((a,b) => a.f > b.f ? -1 : 1);
 
@@ -1494,23 +1584,26 @@ function renderFechas(){
                   : '<p class="vacio">No hay fechas próximas cargadas</p>'}
   </div>`;
 
-  h += '<div class="card"><div class="eyebrow">Por materia</div><div class="acordeon" style="margin-top:10px">' +
-    CURSANDO.map(k => {
-      const m = MAT[k], its = instancias(k);
-      return `<div class="mat ${abiertaF === k ? 'open' : ''}">
-        <button class="mat-top" data-accf="${k}">
-          <span class="mat-ico" style="background:${m.c}22">${m.e}</span>
-          <span class="mat-nm"><b>${esc(m.n)}</b><span>${its.filter(x=>x.f).length} con fecha · ${its.length} instancias</span></span>
-          <span class="mat-hs">${abiertaF === k ? '▾' : '▸'}</span>
+  h += '<div class="acordeon">' + cursando().map(k => {
+      const m = MAT[k], its = instancias(k), open = abiertaF === k;
+      const conF = its.filter(x => x.f).length;
+      return `<div class="card mat ${open ? 'open' : ''}">
+        <button class="mat-head" data-accf="${k}">
+          <span class="rank" style="background:${m.c}33;color:${m.c}">${m.e}</span>
+          <span class="mat-tx">
+            <b>${esc(m.n)}</b>
+            <span class="muted">${conF ? conF + ' con fecha · ' + its.length + ' instancias' : 'sin fechas cargadas'}</span>
+          </span>
+          <span class="chev">${open ? '▾' : '▸'}</span>
         </button>
-        <div class="mat-body">
+        ${open ? `<div class="mat-body">
           ${its.map(x => filaInst(x, false)).join('')}
           <div class="btn-row" style="margin-top:8px">
             <button class="btn ghost mini" data-xadd="${k}">＋ Agregar trabajo o entrega</button>
           </div>
-        </div>
+        </div>` : ''}
       </div>`;
-    }).join('') + '</div></div>';
+    }).join('') + '</div>';
 
   if(pas.length){
     h += `<div class="card"><div class="eyebrow">Ya pasaron</div>${
@@ -1524,52 +1617,59 @@ function renderFechas(){
    12. VISTA: NOTAS
    ========================================================= */
 function renderNotas(){
+  const ucs = cursando();
   let ganados = 0, enJuego = 0, ganadas = [];
-  CURSANDO.forEach(k => {
+  ucs.forEach(k => {
     const c = cuenta(k);
-    if(c.cred){
-      if(c.sum >= c.meta && c.conMax){ ganados += c.cred; ganadas.push(MAT[k].n); }
-      else enJuego += c.cred;
-    }
+    if(c.sum >= c.meta && c.conMax && c.cargadas){ ganados += c.cred; ganadas.push(MAT[k].n); }
+    else enJuego += c.cred;
   });
 
   let h = `<div class="card">
     <div class="anillo">
       <div>
-        <div class="eyebrow">Créditos ganados</div>
-        <div class="num" style="color:var(--menta)">${ganados}</div>
+        <div class="eyebrow">Cursos ganados</div>
+        <div class="res-uc"><span class="num" style="color:var(--menta)">${ganadas.length}</span>
+          <small>de ${ucs.length} UC</small></div>
       </div>
       <div style="flex:1">
         <p class="foco" style="margin:0">${
           ganadas.length
-            ? 'Ya ganaste el curso de <b>' + ganadas.map(esc).join(', ') + '</b>.'
+            ? 'Ya ganaste <b>' + ganadas.map(esc).join(', ') + '</b>' +
+              (ganados ? ' · <b>' + ganados + ' créditos</b>' : '') + '.'
             : 'Todavía no cerraste ningún curso.'}${
-          enJuego ? ' Hay <b>' + enJuego + ' créditos</b> más en juego este semestre.' : ''}</p>
+          enJuego ? ' Quedan <b>' + enJuego + ' créditos</b> en juego.' : ''}</p>
       </div>
     </div>
   </div>`;
 
-  h += '<div class="acordeon">' + CURSANDO.map(k => {
+  h += '<div class="acordeon">' + ucs.map(k => {
     const m = MAT[k], n = nota(k), its = instancias(k), c = cuenta(k), v = veredicto(k);
     const pct = c.tope ? Math.min(100, Math.round(c.sum / c.tope * 100)) : 0;
-    return `<div class="mat ${abiertaN === k ? 'open' : ''}">
-      <button class="mat-top" data-accn="${k}">
-        <span class="mat-ico" style="background:${m.c}22">${m.e}</span>
-        <span class="mat-nm">
+    const open = abiertaN === k;
+    const est = c.cargadas && c.conMax
+      ? (pierdeEnR1(k) || c.bajoMin.length || c.techo < c.meta ? {cl:'no', t:'a examen'}
+         : (c.sum >= c.meta ? {cl:'si', t:'aprobada'} : {cl:'qz', t:'en curso'}))
+      : null;
+    return `<div class="card mat ${open ? 'open' : ''}">
+      <button class="mat-head" data-accn="${k}">
+        <span class="rank" style="background:${m.c}33;color:${m.c}">${m.e}</span>
+        <span class="mat-tx">
           <b>${esc(m.n)}</b>
-          <span>${c.cargadas ? c.sum + ' / ' + c.tope + ' puntos' : 'sin notas cargadas'}${
+          <span class="muted">${c.cargadas ? c.sum + ' / ' + c.tope + ' puntos' : 'sin notas cargadas'}${
             c.cred ? ' · ' + c.cred + ' créditos' : ''}</span>
         </span>
-        <span class="mat-hs">${abiertaN === k ? '▾' : '▸'}</span>
+        ${est ? `<span class="mini-est ${est.cl}">${est.t}</span>` : ''}
+        <span class="chev">${open ? '▾' : '▸'}</span>
       </button>
-      <div class="mat-body">
-        <div class="bar" style="margin-bottom:12px"><i style="width:${pct}%;background:${m.c}"></i></div>
+      <div class="bar" style="margin-top:4px"><i style="width:${pct}%;background:${m.c}"></i></div>
+      ${open ? `<div class="mat-body">
         <div class="cfg-row">
           <div class="campo"><label>Créditos</label>
             <input type="number" min="0" step="1" value="${n.cred||''}" data-ncfg="${k}|cred"></div>
           <div class="campo"><label>Total</label>
             <input type="number" min="0" step="1" value="${n.tope}" data-ncfg="${k}|tope"></div>
-          <div class="campo"><label>Para ganar</label>
+          <div class="campo"><label>Para aprobar</label>
             <input type="number" min="0" step="1" value="${n.meta}" data-ncfg="${k}|meta"></div>
         </div>
         <div class="nt-h"><span class="nm2">Instancia</span><span>Máx</span><span>Mín</span><span>Nota</span></div>
@@ -1587,18 +1687,9 @@ function renderNotas(){
         ${c.posible !== c.tope && c.conMax
           ? `<p class="foco" style="margin:8px 0 0">Ojo: los máximos que cargaste suman <b>${c.posible}</b>, no ${c.tope}.</p>`
           : ''}
-      </div>
+      </div>` : ''}
     </div>`;
   }).join('') + '</div>';
-
-  h += `<div class="card">
-    <div class="eyebrow">Cómo se calcula</div>
-    <p class="foco" style="margin:6px 0 0">
-      <b>Máx</b> es cuánto vale esa instancia · <b>Mín</b> es lo que necesitás para no quedar por el camino
-      (dejalo vacío si no tiene) · <b>Nota</b> es lo que sacaste.
-      El veredicto suma lo cargado y calcula hasta dónde podés llegar con lo que falta rendir.
-    </p>
-  </div>`;
 
   $('#v-notas').innerHTML = h;
 }
@@ -1628,7 +1719,7 @@ function editarInst(k, id){
     <div class="campo"><label>Temas que entran</label>
       <textarea id="f-tm" placeholder="Ej: UT 1 a UT 4">${esc(x.temas||'')}</textarea></div>
     ${x.tipo === 'ctrl' || x.tipo === 'extra'
-      ? '<p class="pista">Para borrarla, usá la ✕ desde la solapa Materias.</p>' : ''}
+      ? '<p class="pista">Para borrarla, usá la ✕ desde la solapa UC.</p>' : ''}
   `, {
     ok(){
       const f = $('#f-f').value, hh = $('#f-h').value, l = $('#f-l').value, tm = $('#f-tm').value.trim();
@@ -1761,10 +1852,85 @@ function cardPendientes(){
   </div>`;
 }
 
+
+/* =========================================================
+   14. EDITAR MATERIAS, TÍTULO Y DESCARGAS
+   ========================================================= */
+const PALETA_UC = ['#FF9DBC','#A98BEE','#FF7FB0','#5FCBAD','#7FB4F0','#F5B75C','#CE9AEA','#6FD3B7','#F09BCF','#9FB3C8'];
+
+function swatches(sel){
+  return '<div class="sw-row">' + PALETA_UC.map(c =>
+    `<span class="sw ${c === sel ? 'on' : ''}" style="background:${c}" data-swc="${c}"></span>`).join('') +
+    `<input type="hidden" id="f-c" value="${sel}"></div>`;
+}
+
+function editarUC(k){
+  const nuevo = !k;
+  const m = nuevo ? {n:'', e:'📘', c:PALETA_UC[0], prio:cursando().length + 1} : MAT[k];
+  abrirHoja(nuevo ? 'Nueva unidad curricular' : 'Editar ' + m.n, `
+    <div class="dos">
+      <div class="campo" style="flex:0 0 86px"><label>Ícono</label>
+        <input id="f-e" value="${esc(m.e || '📘')}" maxlength="4"></div>
+      <div class="campo"><label>Nombre</label>
+        <input id="f-n" value="${esc(m.n || '')}" placeholder="Ej: Contabilidad II"></div>
+    </div>
+    <div class="campo"><label>Color</label>${swatches(m.c || PALETA_UC[0])}</div>
+    <div class="campo"><label>Orden de prioridad</label>
+      <input type="number" id="f-p" min="1" step="1" value="${m.prio || cursando().length + 1}"></div>
+    <p class="pista">La prioridad ordena las materias en todas las listas. El 1 va primero.</p>
+  `, {
+    ok(){
+      const n = $('#f-n').value.trim();
+      if(!n){ alert('Ponele un nombre a la materia.'); return false; }
+      const key = nuevo ? 'uc' + Math.random().toString(36).slice(2,6) : k;
+      db.mats[key] = {n, e:$('#f-e').value.trim() || '📘', c:$('#f-c').value,
+                      prio:Math.max(1, +$('#f-p').value || 1)};
+      cargarMats(); save(); pintar();
+    }
+  });
+}
+
+function borrarUC(k){
+  const m = MAT[k];
+  if(!m) return;
+  if(!confirm('¿Quitar ' + m.n + ' de la lista?\n\nNo se borran ni el temario ni las notas: si la volvés a agregar con el mismo nombre, no vuelven solas, pero los bloques de la rutina que la usaban quedan igual.')) return;
+  db.mats[k] = 'BORRADA';
+  cargarMats(); save(); pintar();
+}
+
+function editarTitulo(){
+  abrirHoja('Título de la app', `
+    <div class="campo"><label>¿Cómo querés que se llame?</label>
+      <input id="f-t" value="${esc(db.titulo || 'Mi semestre')}" maxlength="30"></div>
+  `, {
+    ok(){
+      db.titulo = $('#f-t').value.trim() || 'Mi semestre';
+      save(); pintar();
+    }
+  });
+}
+
+/* ---------- descargas ---------- */
+function bajarArchivo(nombre, contenido, tipo){
+  const b = new Blob([contenido], {type: tipo});
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a');
+  a.href = u; a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 2000);
+}
+function bajarRespaldo(){
+  const d = new Date();
+  const f = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  bajarArchivo('mi-semestre-' + f + '.json', JSON.stringify(db, null, 2), 'application/json');
+}
+
 /* =========================================================
    9. EVENTOS
    ========================================================= */
 function pintar(){
+  const tt = document.getElementById('titulo');
+  if(tt) tt.textContent = db.titulo || 'Mi semestre';
   renderHoy(); renderSemana(); renderMaterias(); renderFechas(); renderNotas(); renderProgreso();
   const lun = new Date(HOY); lun.setDate(HOY.getDate() - idxHoy);
   const dom = new Date(lun);  dom.setDate(lun.getDate() + 6);
@@ -1773,8 +1939,21 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
+
+  /* --- materias, título y descargas --- */
+  if(t.dataset.swc){
+    $('#f-c').value = t.dataset.swc;
+    $('#hoja').querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === t));
+    return;
+  }
+  if(t.dataset.ucedit){ editarUC(t.dataset.ucedit); return; }
+  if(t.dataset.ucdel){ borrarUC(t.dataset.ucdel); return; }
+  if(t.dataset.ucadd){ editarUC(null); return; }
+  if(t.id === 'btn-desc'){ bajarRespaldo(); return; }
+  if(t.id === 'titulo' && editando){ editarTitulo(); return; }
+
 
   /* --- fechas, notas y pendientes --- */
   if(t.dataset.uedit){ const [k,j] = t.dataset.uedit.split('|'); editarUni(k, +j); return; }
