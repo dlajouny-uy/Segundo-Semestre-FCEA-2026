@@ -327,19 +327,23 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .cal-d.hoy .num{color:#fff}
 .cal-d.sel{outline:2.5px solid var(--lav);outline-offset:-2px}
 .cal-ev{
-  display:block;font-size:8px;font-weight:800;line-height:1.5;border-radius:4px;
-  padding:0 3px;margin-top:1px;color:#fff;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;
+  display:block;border-radius:5px;padding:2px 4px;margin-top:2px;color:#fff;text-align:left;overflow:hidden;
 }
+.cal-ev b{display:block;font-size:8.5px;font-weight:800;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev i{display:block;font-style:normal;font-size:7.5px;font-weight:700;opacity:.92;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-mas{font-size:8px;font-weight:800;color:var(--soft);text-align:center;line-height:1.4}
 .cal-d.hoy .cal-mas{color:#fff}
 .cal-nota{font-size:11.5px;color:var(--soft);font-weight:600;margin:12px 0 0;text-align:center}
 @media(min-width:620px){
   .cal{max-width:none;gap:5px}
   .cal .dow{font-size:11px}
-  .cal-d{min-height:76px;border-radius:13px;padding:5px}
+  .cal-d{min-height:96px;border-radius:13px;padding:5px}
   .cal-d .num{font-size:12.5px;text-align:left;padding-left:2px}
-  .cal-ev{font-size:10px;padding:1px 5px;border-radius:6px;margin-top:2px}
+  .cal-ev{padding:3px 6px;border-radius:7px}
+  .cal-ev b{font-size:11px}
+  .cal-ev i{font-size:9.5px}
   .cal-mas{font-size:9.5px;text-align:left;padding-left:3px}
 }
 
@@ -423,6 +427,27 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .sw-row{display:flex;gap:7px;flex-wrap:wrap}
 .brand h1{cursor:default}
 .edit-on .brand h1{cursor:pointer;text-decoration:underline dotted var(--lav) 2px;text-underline-offset:4px}
+/* ---------- secciones movibles ---------- */
+.lienzo{display:grid;grid-template-columns:1fr;align-items:start}
+.sec{min-width:0}
+.sec.off{opacity:.38}
+.sec-bar{
+  display:flex;align-items:center;gap:4px;margin:0 6px 5px;
+  font-size:10px;font-weight:800;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;
+}
+.sec-bar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sec-bar button{
+  flex:none;width:25px;height:25px;border-radius:8px;background:var(--card2);
+  color:var(--lav);font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;
+}
+.sec-bar button:active{transform:scale(.9)}
+.sec-bar button.mute{color:var(--soft);opacity:.55}
+@media(min-width:860px){
+  .lienzo{grid-template-columns:1fr 1fr;column-gap:16px}
+  .sec{grid-column:span 2}
+  .sec.med{grid-column:span 1}
+  .sec.med .acordeon{max-width:none}
+}
 .hidden{display:none}
 @media(min-width:860px){
   body{padding-bottom:24px}
@@ -548,7 +573,7 @@ function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?
 function rawSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 
 const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, notas:{},
-                 pend:[], mats:{}, titulo:'Mi semestre', rutina:null, ts:0};
+                 pend:[], mats:{}, layout:{}, titulo:'Mi semestre', rutina:null, ts:0};
 let db = (()=>{ try{ return Object.assign({}, DB_BASE, JSON.parse(raw(KEY)||'{}')); }catch(e){ return {...DB_BASE}; } })();
 function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPronto(); }
 
@@ -563,6 +588,7 @@ function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPront
   if(!db.controles) db.controles = {};
   if(!db.notas) db.notas = {};
   if(!db.mats)  db.mats  = {};
+  if(!db.layout) db.layout = {};
   if(!db.titulo) db.titulo = 'Mi semestre';
   if(!Array.isArray(db.pend)) db.pend = [];
   /* los controles necesitan id propio para poder colgarles la nota */
@@ -621,6 +647,7 @@ function normalizarRutina(){
   });
   DIAS = db.rutina;
   cargarMats();
+  if(!db.layout) db.layout = {};
   if(!db.notas) db.notas = {};
   if(!Array.isArray(db.pend)) db.pend = [];
   if(!db.controles) db.controles = {};
@@ -823,8 +850,11 @@ function renderHoy(){
         return esc(p.t) + ' · ' + (dd < 0 ? 'venció' : (dd === 0 ? 'es hoy' : (dd === 1 ? 'es mañana' : 'en 2 días')));
       }).join(' · ')}</span></div>`
     : '';
-  $('#v-hoy').innerHTML = (editando ? AVISO : '') + alerta + hero +
-    `<div class="card">${cardDia(d, true)}</div>` + cardPendientes();
+  $('#v-hoy').innerHTML = (editando ? AVISO : '') + alerta + pintarSecciones('hoy', {
+    hero,
+    dia:  `<div class="card">${cardDia(d, true)}</div>`,
+    pend: cardPendientes()
+  });
 }
 
 /* =========================================================
@@ -915,7 +945,7 @@ function cardDia(d, solo){
 /* =========================================================
    6. VISTA · SEMANA
    ========================================================= */
-const AVISO = `<div class="aviso-edit">✏️<span>Modo edición: tocá un bloque para cambiarlo, o usá ＋ para agregar. Los bloques se acomodan solos por hora.</span></div>`;
+const AVISO = `<div class="aviso-edit">✏️<span>Modo edición: tocá un bloque para cambiarlo o usá ＋ para agregar. Con ↑↓ movés las tarjetas, con 👁 las ocultás y con ⇔ las ponés a media pantalla.</span></div>`;
 
 function renderSemana(){
   $('#v-semana').innerHTML = (editando ? AVISO : '') + '<div class="grid">' +
@@ -1093,9 +1123,9 @@ function renderMaterias(){
       <button class="btn mini" data-ucadd="1" style="margin:0">＋ Agregar unidad curricular</button>
     </div>`;
   }
-  h += '</div>' + agH;
+  h += '</div>';
 
-  $('#v-materias').innerHTML = h;
+  $('#v-materias').innerHTML = (editando ? AVISO : '') + pintarSecciones('materias', {ucs:h, agenda:agH});
 }
 
 /* =========================================================
@@ -1382,6 +1412,8 @@ const LUGARES = {'':'—', mvd:'Montevideo', tbo:'Tacuarembó', virt:'Virtual', 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
                'agosto','septiembre','octubre','noviembre','diciembre'];
 const DOW = ['L','M','M','J','V','S','D'];
+const CORTO = {mvd:'Mvd', tbo:'Tbo', virt:'Virtual', otro:'Otro', '':''};
+const corto = t => String(t).replace('Revisión', 'Rev').replace('Control', 'Ctrl');
 
 function nota(k){
   if(!db.notas[k]) db.notas[k] = {};
@@ -1524,8 +1556,15 @@ function calendario(){
     const ver = hay.slice(0, 2);
     c += `<button class="cal-d ${f === hoyIso ? 'hoy' : ''} ${diaSel === f ? 'sel' : ''}" data-cald="${f}">
       <span class="num">${d}</span>
-      ${ver.map(e => `<span class="cal-ev" style="background:${e.c}" title="${esc(e.t)}">${
-          (e.tipo === 'pend' ? '📌' : (MAT[e.k] ? MAT[e.k].e : '•')) + ' ' + esc(e.t)}</span>`).join('')}
+      ${ver.map(e => {
+          const uc = e.tipo === 'pend' ? 'Pendiente' : (MAT[e.k] ? MAT[e.k].n : '');
+          const abajo = [];
+          if(e.x && e.x.h) abajo.push(e.x.h);
+          if(e.x && e.x.lugar) abajo.push(CORTO[e.x.lugar] || '');
+          abajo.push(e.tipo === 'pend' ? esc(e.t) : corto(e.t));
+          return `<span class="cal-ev" style="background:${e.c}" title="${esc(uc + ' · ' + e.t)}">
+            <b>${esc(uc)}</b><i>${abajo.filter(Boolean).join(' · ')}</i></span>`;
+        }).join('')}
       ${hay.length > 2 ? `<span class="cal-mas">+${hay.length - 2} más</span>` : ''}
     </button>`;
   }
@@ -1559,11 +1598,11 @@ function filaInst(x, conMateria){
 }
 
 function renderFechas(){
-  let h = calendario();
+  const S = {cal: calendario(), sel:'', prox:'', ucs:'', pas:''};
 
   if(diaSel){
     const ev = eventos().filter(e => e.f === diaSel);
-    h += `<div class="card">
+    S.sel = `<div class="card">
       <div class="eyebrow">${fmt(diaSel)}</div>
       ${ev.length
         ? ev.map(e => e.tipo === 'pend'
@@ -1578,13 +1617,13 @@ function renderFechas(){
   const prox = todo.filter(x => dias(x.f) >= 0).sort((a,b) => a.f < b.f ? -1 : 1);
   const pas  = todo.filter(x => dias(x.f) < 0).sort((a,b) => a.f > b.f ? -1 : 1);
 
-  h += `<div class="card">
+  S.prox = `<div class="card">
     <div class="eyebrow">Lo que viene</div>
     ${prox.length ? prox.map(x => filaInst(x, true)).join('')
                   : '<p class="vacio">No hay fechas próximas cargadas</p>'}
   </div>`;
 
-  h += '<div class="acordeon">' + cursando().map(k => {
+  S.ucs = '<div class="acordeon">' + cursando().map(k => {
       const m = MAT[k], its = instancias(k), open = abiertaF === k;
       const conF = its.filter(x => x.f).length;
       return `<div class="card mat ${open ? 'open' : ''}">
@@ -1606,11 +1645,11 @@ function renderFechas(){
     }).join('') + '</div>';
 
   if(pas.length){
-    h += `<div class="card"><div class="eyebrow">Ya pasaron</div>${
+    S.pas = `<div class="card"><div class="eyebrow">Ya pasaron</div>${
       pas.slice(0,8).map(x => filaInst(x, true)).join('')}</div>`;
   }
 
-  $('#v-fechas').innerHTML = h;
+  $('#v-fechas').innerHTML = (editando ? AVISO : '') + pintarSecciones('fechas', S);
 }
 
 /* =========================================================
@@ -1625,7 +1664,7 @@ function renderNotas(){
     else enJuego += c.cred;
   });
 
-  let h = `<div class="card">
+  const resumen = `<div class="card">
     <div class="anillo">
       <div>
         <div class="eyebrow">Cursos ganados</div>
@@ -1643,7 +1682,7 @@ function renderNotas(){
     </div>
   </div>`;
 
-  h += '<div class="acordeon">' + ucs.map(k => {
+  let h = '<div class="acordeon">' + ucs.map(k => {
     const m = MAT[k], n = nota(k), its = instancias(k), c = cuenta(k), v = veredicto(k);
     const pct = c.tope ? Math.min(100, Math.round(c.sum / c.tope * 100)) : 0;
     const open = abiertaN === k;
@@ -1691,7 +1730,7 @@ function renderNotas(){
     </div>`;
   }).join('') + '</div>';
 
-  $('#v-notas').innerHTML = h;
+  $('#v-notas').innerHTML = (editando ? AVISO : '') + pintarSecciones('notas', {resumen, ucs:h});
 }
 
 /* =========================================================
@@ -1925,6 +1964,61 @@ function bajarRespaldo(){
   bajarArchivo('mi-semestre-' + f + '.json', JSON.stringify(db, null, 2), 'application/json');
 }
 
+
+/* =========================================================
+   15. SECCIONES MOVIBLES
+   Cada vista es una lista de tarjetas que podés reordenar,
+   ocultar o poner a media pantalla (en compu, lado a lado).
+   ========================================================= */
+const SECCIONES = {
+  hoy:      [['hero','Lo que viene ahora'], ['dia','El día'], ['pend','Pendientes']],
+  materias: [['ucs','Unidades curriculares'], ['agenda','Lo que viene']],
+  fechas:   [['cal','Calendario'], ['sel','El día que tocaste'], ['prox','Lo que viene'],
+             ['ucs','Instancias por UC'], ['pas','Ya pasaron']],
+  notas:    [['resumen','Resumen'], ['ucs','Unidades curriculares']]
+};
+
+function layout(vista){
+  if(!db.layout) db.layout = {};
+  const base = SECCIONES[vista].map(x => x[0]);
+  let L = db.layout[vista];
+  if(!Array.isArray(L)) L = [];
+  L = L.filter(c => c && base.includes(c.id));
+  base.forEach(id => { if(!L.some(c => c.id === id)) L.push({id, on:true, med:false}); });
+  db.layout[vista] = L;
+  return L;
+}
+const tituloSec = (vista, id) => (SECCIONES[vista].find(x => x[0] === id) || [,''])[1];
+
+function pintarSecciones(vista, mapa){
+  const L = layout(vista);
+  let h = '<div class="lienzo">';
+  L.forEach((c, i) => {
+    const cuerpo = mapa[c.id];
+    if(!cuerpo) return;                       /* si no hay nada que mostrar, ni aparece */
+    if(!c.on && !editando) return;
+    h += `<div class="sec ${c.med ? 'med' : ''} ${c.on ? '' : 'off'}">
+      ${editando ? `<div class="sec-bar">
+        <span>${esc(tituloSec(vista, c.id))}</span>
+        <button data-secm="${vista}|${i}|-1" title="Subir" class="${i === 0 ? 'mute' : ''}">↑</button>
+        <button data-secm="${vista}|${i}|1" title="Bajar" class="${i === L.length-1 ? 'mute' : ''}">↓</button>
+        <button data-secw="${vista}|${i}" title="Ancho" class="${c.med ? '' : 'mute'}">⇔</button>
+        <button data-secv="${vista}|${i}" title="Mostrar u ocultar" class="${c.on ? '' : 'mute'}">${c.on ? '👁' : '🚫'}</button>
+      </div>` : ''}
+      ${cuerpo}
+    </div>`;
+  });
+  return h + '</div>';
+}
+
+function moverSec(vista, i, d){
+  const L = layout(vista), j = i + d;
+  if(j < 0 || j >= L.length) return;
+  const [x] = L.splice(i, 1);
+  L.splice(j, 0, x);
+  save(); pintar();
+}
+
 /* =========================================================
    9. EVENTOS
    ========================================================= */
@@ -1939,10 +2033,24 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
 
   /* --- materias, título y descargas --- */
+  if(t.dataset.secm){
+    const [v, i, d] = t.dataset.secm.split('|');
+    moverSec(v, +i, +d); return;
+  }
+  if(t.dataset.secv){
+    const [v, i] = t.dataset.secv.split('|');
+    const c = layout(v)[+i]; if(c){ c.on = !c.on; save(); pintar(); }
+    return;
+  }
+  if(t.dataset.secw){
+    const [v, i] = t.dataset.secw.split('|');
+    const c = layout(v)[+i]; if(c){ c.med = !c.med; save(); pintar(); }
+    return;
+  }
   if(t.dataset.swc){
     $('#f-c').value = t.dataset.swc;
     $('#hoja').querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === t));
