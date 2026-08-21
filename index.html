@@ -204,6 +204,24 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .uni .nm{flex:1;font-size:13px;font-weight:600;text-align:left;min-width:0}
 .uni.done .nm{text-decoration:line-through;opacity:.55}
 .uni .del{font-size:15px;color:var(--soft);opacity:.5;padding:0 3px}
+/* subtemas */
+.uni{flex-wrap:wrap}
+.uni .cnt{flex:none;font-size:10.5px;font-weight:800;color:var(--soft);
+  background:var(--card2);border-radius:99px;padding:2px 8px}
+.uni.done .cnt{color:var(--menta)}
+.uni .abre{flex:none;font-size:11px;color:var(--soft);padding:2px 5px;opacity:.7}
+.subs{flex-basis:100%;padding:4px 0 8px 29px}
+.sub{display:flex;align-items:center;gap:8px;padding:4px 0}
+.sub .tick{flex:none;width:17px;height:17px;border-radius:6px;border:2px solid var(--line);
+  display:grid;place-items:center;font-size:9px;color:transparent}
+.sub.done .tick{background:var(--menta);border-color:var(--menta);color:#fff}
+.sub .nm{flex:1;font-size:12px;font-weight:600;text-align:left;min-width:0;color:var(--soft)}
+.sub.done .nm{text-decoration:line-through;opacity:.5}
+.sub .del{font-size:13px;color:var(--soft);opacity:.45;padding:0 3px}
+.sub-add{display:flex;gap:6px;margin-top:6px}
+.sub-add input{flex:1;min-width:0;border:2px dashed var(--line);background:transparent;
+  border-radius:10px;padding:6px 9px;font-size:12px;font-weight:600}
+.sub-add button{flex:none;font-size:11.5px;font-weight:800;color:var(--lav);padding:0 8px}
 .add-row{display:flex;gap:7px;margin-top:10px}
 .add-row input{
   flex:1;min-width:0;border:2px solid var(--line);background:var(--card2);
@@ -958,7 +976,7 @@ function cursando(){
   return Object.keys(MAT).filter(k => MAT[k].prio).sort((a,b) => MAT[a].prio - MAT[b].prio);
 }
 const MEDALLA = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣'];
-let abierta = null, abiertaF = null, abiertaN = null, diaSel = null;
+let abierta = null, abiertaF = null, abiertaN = null, diaSel = null, subAbierta = null;
 
 function rev(k){
   if(typeof db.revision[k] === 'string') db.revision[k] = {r1:db.revision[k], r2:''};
@@ -970,7 +988,19 @@ function ctrls(k){
   db.controles[k].forEach(c => { if(!c.id) c.id = 'c' + Math.random().toString(36).slice(2,7); });
   return db.controles[k];
 }
-function unis(k){  if(!db.temario[k])   db.temario[k]   = []; return db.temario[k]; }
+function unis(k){
+  if(!db.temario[k]) db.temario[k] = [];
+  db.temario[k].forEach(u => { if(u.subs && !Array.isArray(u.subs)) u.subs = []; });
+  return db.temario[k];
+}
+/* si la unidad tiene subtemas, se completa sola cuando estan todos tildados */
+const tieneSubs = u => Array.isArray(u.subs) && u.subs.length > 0;
+const subsHechos = u => tieneSubs(u) ? u.subs.filter(x => x.ok).length : 0;
+function uniOk(u){ return tieneSubs(u) ? u.subs.every(x => x.ok) : !!u.ok; }
+function marcarUni(u, val){
+  if(tieneSubs(u)) u.subs.forEach(x => { x.ok = val; });
+  u.ok = val;
+}
 function dias(f){  return f ? Math.ceil((new Date(f + 'T12:00') - HOY) / 864e5) : null; }
 function fmt(f){   const d = new Date(f + 'T12:00'); return d.getDate() + '/' + (d.getMonth()+1); }
 function cuando(d){
@@ -999,7 +1029,7 @@ function agenda(){
 function bloqueRev(k, rn){
   const m = MAT[k], r = rev(k), f = r['r'+rn];
   const lista = unis(k).map((u,j) => ({u,j})).filter(x => (x.u.r||1) === rn);
-  const listas = lista.filter(x => x.u.ok).length;
+  const listas = lista.filter(x => uniOk(x.u)).length;
   const pct = lista.length ? Math.round(listas/lista.length*100) : 0;
   const d = dias(f);
   const faltan = lista.length - listas;
@@ -1027,12 +1057,30 @@ function bloqueRev(k, rn){
     ${lista.length ? `<div class="bar"><i style="width:${pct}%;background:${m.c}"></i></div>
       <p class="foco" style="margin:7px 0 6px">${listas}/${lista.length} unidades · ${pct}%${ritmo ? ' · ' + ritmo : ''}</p>` : ''}
     ${lista.length
-      ? lista.map(x => `<div class="uni ${x.u.ok?'done':''}">
+      ? lista.map(x => {
+          const u = x.u, hecho = uniOk(u), con = tieneSubs(u), open = subAbierta === (k + '|' + x.j);
+          return `<div class="uni ${hecho?'done':''}">
           <button class="tick" data-uni="${k}|${x.j}">✓</button>
-          <button class="nm" data-uni="${k}|${x.j}">${esc(x.u.t)}</button>
+          <button class="nm" data-uni="${k}|${x.j}">${esc(u.t)}</button>
+          ${con ? `<span class="cnt">${subsHechos(u)}/${u.subs.length}</span>
+                  <button class="abre" data-usub="${k}|${x.j}">${open ? '▾' : '▸'}</button>` : ''}
           <button class="del" data-uedit="${k}|${x.j}" title="Editar">✎</button>
           <button class="del" data-del="${k}|${x.j}" title="Borrar">×</button>
-        </div>`).join('')
+          ${(con && open) || (!con && open) ? `<div class="subs">
+            ${con ? u.subs.map((sb, si) => `<div class="sub ${sb.ok?'done':''}">
+                <button class="tick" data-sub="${k}|${x.j}|${si}">✓</button>
+                <button class="nm" data-sub="${k}|${x.j}|${si}">${esc(sb.t)}</button>
+                <button class="del" data-sedit="${k}|${x.j}|${si}" title="Editar">✎</button>
+                <button class="del" data-sdel="${k}|${x.j}|${si}" title="Borrar">×</button>
+              </div>`).join('') : ''}
+            <div class="sub-add">
+              <input placeholder="Subtema" data-sadd="${k}|${x.j}">
+              <button data-saddbtn="${k}|${x.j}">Sumar</button>
+            </div>
+          </div>` : ''}
+          ${!con ? `<button class="abre" data-usub="${k}|${x.j}" title="Agregar subtemas">${open ? '▾' : '＋sub'}</button>` : ''}
+        </div>`;
+        }).join('')
       : '<p class="vacio">Sin unidades cargadas todavía 🌷</p>'}
     <div class="add-row">
       <input placeholder="Unidad · tema" data-add="${k}|${rn}">
@@ -1807,11 +1855,20 @@ function editarUni(k, j){
         <option value="1" ${(u.r||1)==1?'selected':''}>🍂 Revisión 1</option>
         <option value="2" ${(u.r||1)==2?'selected':''}>🎄 Revisión 2</option>
       </select></div>
+    <div class="campo"><label>Subtemas (uno por línea)</label>
+      <textarea id="f-subs" style="min-height:120px" placeholder="La política&#10;El poder&#10;Acción colectiva">${
+        esc((u.subs||[]).map(x => x.t).join('\n'))}</textarea></div>
+    <p class="pista">Podés pegar la lista del programa. La unidad se marca sola cuando tildás todos.</p>
   `, {
     ok(){
       const t = $('#f-t').value.trim();
       if(!t){ alert('El tema no puede quedar vacío.'); return false; }
       u.t = t; u.r = +$('#f-r').value;
+      const previos = {};
+      (u.subs || []).forEach(x => { previos[x.t] = x.ok; });
+      const nuevos = $('#f-subs').value.split('\n').map(x => x.trim()).filter(Boolean);
+      u.subs = nuevos.map(x => ({t:x, ok: !!previos[x]}));       /* conserva lo ya tildado */
+      if(u.subs.length) u.ok = u.subs.every(x => x.ok);
       save(); pintar();
     }
   });
@@ -2019,7 +2076,7 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
 
   /* --- materias, título y descargas --- */
@@ -2051,6 +2108,52 @@ document.addEventListener('click', ev => {
 
   /* --- fechas, notas y pendientes --- */
   if(t.dataset.uedit){ const [k,j] = t.dataset.uedit.split('|'); editarUni(k, +j); return; }
+  if(t.dataset.usub){
+    subAbierta = (subAbierta === t.dataset.usub) ? null : t.dataset.usub;
+    renderMaterias(); return;
+  }
+  if(t.dataset.sub){
+    const [k,j,si] = t.dataset.sub.split('|');
+    const u = db.temario[k][+j];
+    if(u && u.subs && u.subs[+si]){
+      u.subs[+si].ok = !u.subs[+si].ok;
+      u.ok = u.subs.every(x => x.ok);
+      save(); renderMaterias();
+    }
+    return;
+  }
+  if(t.dataset.sdel){
+    const [k,j,si] = t.dataset.sdel.split('|');
+    const u = db.temario[k][+j];
+    if(u && u.subs){ u.subs.splice(+si,1); u.ok = u.subs.length ? u.subs.every(x=>x.ok) : u.ok; save(); renderMaterias(); }
+    return;
+  }
+  if(t.dataset.sedit){
+    const [k,j,si] = t.dataset.sedit.split('|');
+    const u = db.temario[k][+j];
+    if(!u || !u.subs || !u.subs[+si]) return;
+    const sb = u.subs[+si];
+    abrirHoja('Editar subtema', `<div class="campo"><label>Subtema</label>
+      <input id="f-t" value="${esc(sb.t)}"></div>`, {
+      ok(){ const v = $('#f-t').value.trim(); if(!v){ alert('No puede quedar vacío.'); return false; }
+            sb.t = v; save(); pintar(); }
+    });
+    return;
+  }
+  if(t.dataset.saddbtn){
+    const key = t.dataset.saddbtn, [k,j] = key.split('|');
+    const inp = document.querySelector(`[data-sadd="${key}"]`);
+    const v = inp && inp.value.trim();
+    if(!v) return;
+    const u = db.temario[k][+j];
+    if(!Array.isArray(u.subs)) u.subs = [];
+    u.subs.push({t:v, ok:false});
+    u.ok = u.subs.every(x => x.ok);
+    subAbierta = key;
+    save(); renderMaterias();
+    const n2 = document.querySelector(`[data-sadd="${key}"]`); if(n2) n2.focus();
+    return;
+  }
   if(t.dataset.iedit){ const [k,id] = t.dataset.iedit.split('|'); editarInst(k, id); return; }
   if(t.dataset.xadd){ agregarExtra(t.dataset.xadd); return; }
   if(t.dataset.accf){ abiertaF = (abiertaF === t.dataset.accf) ? null : t.dataset.accf; renderFechas(); return; }
@@ -2145,7 +2248,7 @@ document.addEventListener('click', ev => {
   }
   if(t.dataset.uni){
     const [k, j] = t.dataset.uni.split('|');
-    db.temario[k][+j].ok = !db.temario[k][+j].ok; save(); renderMaterias(); return;
+    const u = db.temario[k][+j]; marcarUni(u, !uniOk(u)); save(); renderMaterias(); return;
   }
   if(t.dataset.del){
     const [k, j] = t.dataset.del.split('|');
@@ -2214,6 +2317,11 @@ function agregarCtrl(k){
 
 document.addEventListener('keydown', ev => {
   if(ev.key === 'Escape' && hojaCtx){ cerrarHoja(); return; }
+  if(ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.sadd){
+    const b = document.querySelector(`[data-saddbtn="${ev.target.dataset.sadd}"]`);
+    if(b) b.click();
+    return;
+  }
   if(ev.key !== 'Enter' || !ev.target.dataset) return;
   if(ev.target.dataset.add)   agregar(ev.target.dataset.add);
   if(ev.target.dataset.caddT) agregarCtrl(ev.target.dataset.caddT);
