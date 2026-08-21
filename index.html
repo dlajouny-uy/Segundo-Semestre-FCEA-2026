@@ -1841,7 +1841,8 @@ document.addEventListener('click', ev => {
 
   if(t.dataset.v){
     document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b === t));
-    ['hoy','semana','materias','progreso'].forEach(v => $('#v-'+v).classList.toggle('hidden', v !== t.dataset.v));
+    document.querySelectorAll('main section').forEach(sec =>
+      sec.classList.toggle('hidden', sec.id !== 'v-' + t.dataset.v));
     window.scrollTo({top:0, behavior:'smooth'});
     return;
   }
