@@ -384,8 +384,6 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 [data-tema=noche] .veredicto.si{background:#23453A;color:#7FD8B8}
 [data-tema=noche] .veredicto.no{background:#4A2530;color:#FF9DB0}
 [data-tema=noche] .veredicto.qz{background:#453521;color:#F0C07A}
-.cfg-row{display:flex;gap:7px;margin-bottom:11px}
-.cfg-row .campo{flex:1;margin-bottom:0}
 
 /* ---------- pendientes ---------- */
 .pd{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line)}
@@ -1420,9 +1418,8 @@ function nota(k){
   const n = db.notas[k];
   if(!n.it) n.it = {};
   if(!Array.isArray(n.extra)) n.extra = [];
-  if(n.tope == null) n.tope = 100;
-  if(n.meta == null) n.meta = 50;
-  if(n.cred == null) n.cred = 0;
+  n.tope = 100;
+  n.meta = 50;
   return n;
 }
 function cfgIt(k, id){
@@ -1469,8 +1466,7 @@ function cuenta(k){
     }
   });
   const techo = sum + Math.max(0, posible - maxRendido);
-  return {sum, posible, techo, bajoMin, cargadas, conMax,
-          meta:+n.meta, tope:+n.tope, cred:+n.cred};
+  return {sum, posible, techo, bajoMin, cargadas, conMax, meta:+n.meta, tope:+n.tope};
 }
 const FESTEJO = [
   '¡Aprobaste! 🎉 Te lo bancaste laburando y estudiando a la vez.',
@@ -1507,8 +1503,7 @@ function veredicto(k){
   if(!c.cargadas)
     return {cl:'qz', txt:'Necesitás ' + c.meta + ' de ' + c.tope + ' puntos para aprobar.'};
   if(c.sum >= c.meta)
-    return {cl:'si', txt:frase(FESTEJO, k) + '<br><br>' + c.sum + ' de ' + c.tope + ' puntos' +
-      (c.cred ? ' · ' + c.cred + ' créditos' : '') + '.'};
+    return {cl:'si', txt:frase(FESTEJO, k) + '<br><br>' + c.sum + ' de ' + c.tope + ' puntos.'};
   if(c.techo < c.meta)
     return {cl:'no', txt:'Llegás como máximo a ' + c.techo + ' y necesitás ' + c.meta +
       '.<br><br>' + frase(ANIMO, k)};
@@ -1657,11 +1652,12 @@ function renderFechas(){
    ========================================================= */
 function renderNotas(){
   const ucs = cursando();
-  let ganados = 0, enJuego = 0, ganadas = [];
+  const ganadas = [], aExamen = [];
   ucs.forEach(k => {
     const c = cuenta(k);
-    if(c.sum >= c.meta && c.conMax && c.cargadas){ ganados += c.cred; ganadas.push(MAT[k].n); }
-    else enJuego += c.cred;
+    if(!c.conMax || !c.cargadas) return;
+    if(pierdeEnR1(k) || c.bajoMin.length || c.techo < c.meta) aExamen.push(MAT[k].n);
+    else if(c.sum >= c.meta) ganadas.push(MAT[k].n);
   });
 
   const resumen = `<div class="card">
@@ -1674,16 +1670,15 @@ function renderNotas(){
       <div style="flex:1">
         <p class="foco" style="margin:0">${
           ganadas.length
-            ? 'Ya ganaste <b>' + ganadas.map(esc).join(', ') + '</b>' +
-              (ganados ? ' · <b>' + ganados + ' créditos</b>' : '') + '.'
+            ? 'Ya aprobaste <b>' + ganadas.map(esc).join(', ') + '</b>.'
             : 'Todavía no cerraste ningún curso.'}${
-          enJuego ? ' Quedan <b>' + enJuego + ' créditos</b> en juego.' : ''}</p>
+          aExamen.length ? ' Vas a examen en <b>' + aExamen.map(esc).join(', ') + '</b>.' : ''}</p>
       </div>
     </div>
   </div>`;
 
   let h = '<div class="acordeon">' + ucs.map(k => {
-    const m = MAT[k], n = nota(k), its = instancias(k), c = cuenta(k), v = veredicto(k);
+    const m = MAT[k], its = instancias(k), c = cuenta(k), v = veredicto(k);
     const pct = c.tope ? Math.min(100, Math.round(c.sum / c.tope * 100)) : 0;
     const open = abiertaN === k;
     const est = c.cargadas && c.conMax
@@ -1695,22 +1690,13 @@ function renderNotas(){
         <span class="rank" style="background:${m.c}33;color:${m.c}">${m.e}</span>
         <span class="mat-tx">
           <b>${esc(m.n)}</b>
-          <span class="muted">${c.cargadas ? c.sum + ' / ' + c.tope + ' puntos' : 'sin notas cargadas'}${
-            c.cred ? ' · ' + c.cred + ' créditos' : ''}</span>
+          <span class="muted">${c.cargadas ? c.sum + ' / ' + c.tope + ' puntos' : 'sin notas cargadas'}</span>
         </span>
         ${est ? `<span class="mini-est ${est.cl}">${est.t}</span>` : ''}
         <span class="chev">${open ? '▾' : '▸'}</span>
       </button>
       <div class="bar" style="margin-top:4px"><i style="width:${pct}%;background:${m.c}"></i></div>
       ${open ? `<div class="mat-body">
-        <div class="cfg-row">
-          <div class="campo"><label>Créditos</label>
-            <input type="number" min="0" step="1" value="${n.cred||''}" data-ncfg="${k}|cred"></div>
-          <div class="campo"><label>Total</label>
-            <input type="number" min="0" step="1" value="${n.tope}" data-ncfg="${k}|tope"></div>
-          <div class="campo"><label>Para aprobar</label>
-            <input type="number" min="0" step="1" value="${n.meta}" data-ncfg="${k}|meta"></div>
-        </div>
         <div class="nt-h"><span class="nm2">Instancia</span><span>Máx</span><span>Mín</span><span>Nota</span></div>
         ${its.map(x => `<div class="nt">
           <button class="nm2" data-iedit="${k}|${x.id}">${x.emo} ${esc(x.n)}
@@ -2243,12 +2229,6 @@ document.addEventListener('change', ev => {
     const [k, id, campo] = ev.target.dataset.nt.split('|');
     const v = ev.target.value;
     cfgIt(k, id)[campo] = (v === '' ? null : +v);
-    save(); renderNotas(); return;
-  }
-  if(ev.target.dataset && ev.target.dataset.ncfg){
-    const [k, campo] = ev.target.dataset.ncfg.split('|');
-    const v = ev.target.value;
-    nota(k)[campo] = (v === '' ? (campo === 'cred' ? 0 : (campo === 'tope' ? 100 : 50)) : +v);
     save(); renderNotas(); return;
   }
   const ref = ev.target.dataset ? ev.target.dataset.revFecha : null;
