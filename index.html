@@ -464,6 +464,10 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
   .sec.med{grid-column:span 1}
   .sec.med .acordeon{max-width:none}
 }
+.meta.salt{opacity:.62}
+.meta.salt .mtop b,.meta.salt .mtop .val{text-decoration:line-through;text-decoration-thickness:1.5px}
+.meta.salt ul{opacity:.7}
+.mtop .bq-ico{align-self:center}
 /* ---------- bloques salteados ---------- */
 .bloque.salt{opacity:.62;background:var(--card2)}
 .bloque.salt .tx b,.bloque.salt .tx span{text-decoration:line-through;text-decoration-thickness:1.5px}
@@ -798,8 +802,14 @@ function balance(k){
   DIAS.forEach(d => {
     if(d.flex){
       d.metas.forEach(mt => {
+        const hm = Math.min(s.min[d.id+'-'+mt.m]||0, mt.min);
+        if(s.salt[saltMeta(d, mt)]){
+          /* la dejaste pasar: lo que ya hiciste cuenta, lo que falta no pesa */
+          if(hm){ plan[mt.m] = (plan[mt.m]||0) + hm; hecho[mt.m] = (hecho[mt.m]||0) + hm; }
+          return;
+        }
         plan[mt.m] = (plan[mt.m]||0) + mt.min;
-        hecho[mt.m] = (hecho[mt.m]||0) + Math.min(s.min[d.id+'-'+mt.m]||0, mt.min);
+        hecho[mt.m] = (hecho[mt.m]||0) + hm;
       });
     } else {
       d.bloques.forEach((b,j) => {
@@ -819,6 +829,10 @@ function porcentaje(k){
   const p = Object.values(plan).reduce((a,b)=>a+b,0);
   const h = Object.values(hecho).reduce((a,b)=>a+b,0);
   return p ? Math.round(h/p*100) : 0;
+}
+function metasVivas(d){
+  const s = sem();
+  return (d.metas || []).filter(mt => !s.salt[saltMeta(d, mt)]);
 }
 function diaCompleto(d){
   const s = sem();
@@ -871,7 +885,7 @@ function renderHoy(){
     }
   } else {
     const pend = d.flex
-      ? d.metas.filter(mt => metaMin(d,mt.m) < mt.min).map(mt => matB(mt).n).join(' y ')
+      ? metasVivas(d).filter(mt => metaMin(d,mt.m) < mt.min).map(mt => matB(mt).n).join(' y ')
       : '';
     hero = `<div class="now">
       <div class="eyebrow">${d.e} ${esc(d.n)}</div>
@@ -908,19 +922,22 @@ function cardDia(d, solo){
   if(d.flex){
     d.metas.forEach((mt, j) => {
       const m = matB(mt), hechos = metaMin(d, mt.m);
+      const off = !!sem().salt[saltMeta(d, mt)];
       const pct = Math.min(100, Math.round(hechos/mt.min*100));
-      h += `<div class="meta" style="border-left-color:${m.c}">
+      h += `<div class="meta ${off?'salt':''}" style="border-left-color:${m.c}">
         <div class="mtop">
           <b>${m.e} ${esc(m.n)}</b>
+          ${off ? '<span class="chip-salt">lo dejaste pasar</span>' : ''}
           <span class="val" style="color:${m.c}">${hs(hechos)} / ${hs(mt.min)}</span>
+          ${editando ? '' : `<button class="bq-ico ${off?'on':''}" data-msalt="${d.id}|${j}" title="Hoy no va">⊘</button>`}
         </div>
         <div class="bar"><i style="width:${pct}%;background:${m.c}"></i></div>
-        <div class="plusminus">
+        ${off ? '' : `<div class="plusminus">
           <button data-meta="${d.id}|${mt.m}|-30">−30'</button>
           <button data-meta="${d.id}|${mt.m}|30">+30'</button>
           <button data-meta="${d.id}|${mt.m}|60">+1 h</button>
           <button data-meta="${d.id}|${mt.m}|0">reset</button>
-        </div>
+        </div>`}
         ${mt.tareas.length ? '<ul>' + mt.tareas.map(t=>`<li>${esc(t)}</li>`).join('') + '</ul>' : ''}
         ${mt.nota ? `<span class="nota-lin">📝 ${esc(mt.nota)}</span>` : ''}
         ${editando ? `<div class="plusminus" style="margin-top:9px">
@@ -1016,6 +1033,7 @@ function unis(k){
   return db.temario[k];
 }
 /* si la unidad tiene subtemas, se completa sola cuando estan todos tildados */
+const saltMeta = (d, mt) => 'meta:' + d.id + '-' + mt.m;
 const tieneSubs = u => Array.isArray(u.subs) && u.subs.length > 0;
 const subsHechos = u => tieneSubs(u) ? u.subs.filter(x => x.ok).length : 0;
 function uniOk(u){ return tieneSubs(u) ? u.subs.every(x => x.ok) : !!u.ok; }
@@ -1246,12 +1264,18 @@ function renderProgreso(){
   const sAct = sem(), nSalt = Object.keys(sAct.salt || {}).length;
   if(nSalt){
     let minSalt = 0;
-    DIAS.forEach(d => (d.bloques||[]).forEach((b,j) => {
-      if(!b.pausa && sAct.salt[bid(d,j,b)]) minSalt += dur(b);
-    }));
+    DIAS.forEach(d => {
+      (d.bloques||[]).forEach((b,j) => {
+        if(!b.pausa && sAct.salt[bid(d,j,b)]) minSalt += dur(b);
+      });
+      (d.metas||[]).forEach(mt => {
+        if(sAct.salt[saltMeta(d, mt)])
+          minSalt += Math.max(0, mt.min - Math.min(sAct.min[d.id+'-'+mt.m]||0, mt.min));
+      });
+    });
     h += `<div class="card">
       <div class="eyebrow">Esta semana</div>
-      <p class="foco" style="margin:6px 0 0">Dejaste pasar <b>${nSalt} bloque${nSalt>1?'s':''}</b>
+      <p class="foco" style="margin:6px 0 0">Dejaste pasar <b>${nSalt} cosa${nSalt>1?'s':''}</b>
         (${hs(minSalt)}). No cuentan en el porcentaje, ni a favor ni en contra.
         El lunes vuelven solos a la rutina.</p>
     </div>`;
@@ -2106,17 +2130,21 @@ function moverSec(vista, i, d){
    Un bloque que decidís no hacer no es lo mismo que uno que
    quedó colgado: no cuenta en contra del porcentaje.
    ========================================================= */
-function hojaSaltar(diaId, j){
+function hojaSaltar(diaId, j, esMeta){
   const d = dia(diaId); if(!d) return;
-  const b = d.bloques[j]; if(!b) return;
-  const s = sem(), id = bid(d, j, b), m = matB(b);
-  const cab = m.e + ' ' + m.n + (b.i ? ' · ' + b.i : '');
+  const cosa = esMeta ? (d.metas||[])[j] : (d.bloques||[])[j];
+  if(!cosa) return;
+  const s = sem(), m = matB(cosa);
+  const id = esMeta ? saltMeta(d, cosa) : bid(d, j, cosa);
+  const tipo = esMeta ? 'msalt2' : 'salt2';
+  const cab = m.e + ' ' + m.n + (esMeta ? ' · ' + d.n : (cosa.i ? ' · ' + cosa.i : ''));
+  const qué = esMeta ? 'esta meta' : 'este bloque';
 
   if(s.salt[id]){
     abrirHoja(cab, `
-      <p class="pista">Ahora mismo está marcado como que lo dejaste pasar esta semana.</p>
-      <button class="hoja-op" data-salt2="volver|${diaId}|${j}">
-        <b>↩️ Volver a ponerlo</b>
+      <p class="pista">Ahora mismo está marcada como que la dejaste pasar esta semana.</p>
+      <button class="hoja-op" data-${tipo}="volver|${diaId}|${j}">
+        <b>↩️ Volver a ponerla</b>
         <span>Vuelve a la rutina normal y a contar en el porcentaje.</span>
       </button>
     `, {ok(){ return; }});
@@ -2125,36 +2153,38 @@ function hojaSaltar(diaId, j){
   }
 
   abrirHoja(cab, `
-    <p class="pista">¿Qué hacemos con este bloque?</p>
-    <button class="hoja-op" data-salt2="pend|${diaId}|${j}">
+    <p class="pista">¿Qué hacemos con ${qué}?</p>
+    <button class="hoja-op" data-${tipo}="pend|${diaId}|${j}">
       <b>📌 Lo paso a Pendientes</b>
       <span>Lo tengo que hacer igual, pero en otro momento. Te queda anotado en Hoy.</span>
     </button>
-    <button class="hoja-op" data-salt2="chau|${diaId}|${j}">
+    <button class="hoja-op" data-${tipo}="chau|${diaId}|${j}">
       <b>🍃 Esta semana no va</b>
       <span>Lo dejo pasar y listo. No queda debiendo nada.</span>
     </button>
     <p class="pista" style="margin-top:4px">En los dos casos deja de contar en contra del porcentaje de la semana.
-      El lunes que viene vuelve solo.</p>
+      El lunes que viene vuelve sola.</p>
   `, {ok(){ return; }});
   const g = $('#hoja').querySelector('[data-hok]'); if(g) g.remove();
 }
 
-function aplicarSalto(modo, diaId, j){
+function aplicarSalto(modo, diaId, j, esMeta){
   const d = dia(diaId); if(!d) return;
-  const b = d.bloques[j]; if(!b) return;
-  const s = sem(), id = bid(d, j, b), m = matB(b);
+  const cosa = esMeta ? (d.metas||[])[j] : (d.bloques||[])[j];
+  if(!cosa) return;
+  const s = sem(), m = matB(cosa);
+  const id = esMeta ? saltMeta(d, cosa) : bid(d, j, cosa);
 
   if(modo === 'volver'){ delete s.salt[id]; }
   else {
     s.salt[id] = true;
-    delete s.check[id];
+    if(!esMeta) delete s.check[id];   /* los minutos ya hechos de una meta NO se borran */
     if(modo === 'pend'){
       db.pend.push({
         id: 'p' + Math.random().toString(36).slice(2,7),
-        t: m.n + ' · ' + (b.t || 'lo del ' + d.n.toLowerCase()),
+        t: m.n + ' · ' + (esMeta ? hs(cosa.min) : (cosa.t || 'lo del ' + d.n.toLowerCase())),
         f: '', ok: false,
-        d: 'Venía del ' + d.n.toLowerCase() + (b.i ? ' ' + b.i : '')
+        d: 'Venía del ' + d.n.toLowerCase() + (!esMeta && cosa.i ? ' ' + cosa.i : '')
       });
     }
   }
@@ -2175,7 +2205,7 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
 
   /* --- materias, título y descargas --- */
@@ -2290,10 +2320,15 @@ document.addEventListener('click', ev => {
     pintar(); return;
   }
   if(t.dataset.nota){ const [d0,j0] = t.dataset.nota.split('|'); editarNota(d0, +j0); return; }
-  if(t.dataset.salt){ const [d0,j0] = t.dataset.salt.split('|'); hojaSaltar(d0, +j0); return; }
+  if(t.dataset.salt){ const [d0,j0] = t.dataset.salt.split('|'); hojaSaltar(d0, +j0, false); return; }
+  if(t.dataset.msalt){ const [d0,j0] = t.dataset.msalt.split('|'); hojaSaltar(d0, +j0, true); return; }
   if(t.dataset.salt2){
     const [modo,d0,j0] = t.dataset.salt2.split('|');
-    cerrarHoja(); aplicarSalto(modo, d0, +j0); return;
+    cerrarHoja(); aplicarSalto(modo, d0, +j0, false); return;
+  }
+  if(t.dataset.msalt2){
+    const [modo,d0,j0] = t.dataset.msalt2.split('|');
+    cerrarHoja(); aplicarSalto(modo, d0, +j0, true); return;
   }
   if(t.dataset.bedit){ const [d0,j0] = t.dataset.bedit.split('|'); editarBloque(d0, +j0); return; }
   if(t.dataset.badd){ editarBloque(t.dataset.badd, -1); return; }
