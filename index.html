@@ -491,6 +491,19 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .hoja-op span{display:block;font-size:12px;font-weight:600;color:var(--soft);line-height:1.4}
 .hoja-op:active{transform:scale(.985)}
 /* ---------- repaso espaciado ---------- */
+.rp-obs{display:block;font-size:11.5px;font-weight:700;color:var(--lav);margin-top:3px;
+  white-space:pre-wrap;line-height:1.35}
+.rp-tope{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;
+  background:#FFE6E9;color:#C9506A;margin-left:5px}
+[data-tema=noche] .rp-tope{background:#4A2530;color:#FF9DB0}
+.rp-fin{opacity:.5}
+.cfg-uc{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.cfg-uc:last-child{border-bottom:none}
+.cfg-uc b{flex:1;min-width:0;font-size:13.5px}
+.cfg-uc select{flex:none;width:96px;border:2px solid var(--line);background:var(--card2);
+  border-radius:10px;padding:6px 6px;font-size:12px;font-weight:700}
+.cfg-uc input{flex:none;width:52px;text-align:center;border:2px solid var(--line);
+  background:var(--card2);border-radius:10px;padding:6px 2px;font-size:13px;font-weight:800}
 .rp{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:15px;
     background:var(--card2);margin-bottom:7px;border-left:4px solid var(--lav)}
 .rp .tx{flex:1;min-width:0;text-align:left;background:none;padding:0}
@@ -588,7 +601,7 @@ const MAT_BASE = {
 };
 let MAT = JSON.parse(JSON.stringify(MAT_BASE));
 
-const RUTINA_V = 3;   /* al subir este número, la rutina se rearma con lo de abajo */
+const RUTINA_V = 4;   /* al subir este número, la rutina se rearma con lo de abajo */
 const DIAS_BASE = [
   {id:'lun', n:'Lunes', e:'🌷', foco:'AYGO II + arrancar GG1 de la semana', bloques:[
     {i:'12:00', f:'14:00', m:'der',    t:'Clase',              d:'Durante el trabajo'},
@@ -619,7 +632,8 @@ const DIAS_BASE = [
     {i:'08:00', f:'10:00', m:'macro',  t:'Clase de fondo',     d:'Escuchar mientras trabajás'},
     {i:'19:00', f:'20:30', m:'calc',   t:'Manual + grabadas',  d:'Ejercicios'},
     {i:'20:30', f:'20:45', pausa:true, t:'Descanso / cena ☕'},
-    {i:'20:45', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'}
+    {i:'20:45', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'},
+    {i:'22:30', f:'23:00', m:'rep',    t:'Repaso',             d:'Solo lo que vence hoy'}
   ]},
   {id:'sab', n:'Sábado', e:'🧁', flex:true, foco:'Sin horarios: elegís vos cuándo', metas:[
     {m:'calc',  min:120, tareas:['Continuar manual / clases grabadas','Resolver ejercicios','Entender antes de avanzar']},
@@ -645,7 +659,7 @@ function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?
 function rawSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 
 const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, notas:{},
-                 pend:[], mats:{}, layout:{}, repaso:[], titulo:'Mi semestre',
+                 pend:[], mats:{}, layout:{}, repaso:[], repcfg:{}, titulo:'Mi semestre',
                  rutina:null, rutinaV:0, ts:0};
 let db = (()=>{ try{ return Object.assign({}, DB_BASE, JSON.parse(raw(KEY)||'{}')); }catch(e){ return {...DB_BASE}; } })();
 function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPronto(); }
@@ -663,6 +677,7 @@ function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPront
   if(!db.mats)  db.mats  = {};
   if(!db.layout) db.layout = {};
   if(!Array.isArray(db.repaso)) db.repaso = [];
+  if(!db.repcfg) db.repcfg = {};
   if(!db.titulo) db.titulo = 'Mi semestre';
   if(!Array.isArray(db.pend)) db.pend = [];
   /* los controles necesitan id propio para poder colgarles la nota */
@@ -731,6 +746,7 @@ function normalizarRutina(){
   cargarMats();
   if(!db.layout) db.layout = {};
   if(!Array.isArray(db.repaso)) db.repaso = [];
+  if(!db.repcfg) db.repcfg = {};
   if(!db.notas) db.notas = {};
   if(!Array.isArray(db.pend)) db.pend = [];
   if(!db.controles) db.controles = {};
@@ -2146,7 +2162,8 @@ const SECCIONES = {
   fechas:   [['cal','Calendario'], ['sel','El día que tocaste'], ['prox','Lo que viene'],
              ['ucs','Instancias por UC'], ['pas','Ya pasaron']],
   notas:    [['resumen','Resumen'], ['ucs','Unidades curriculares']],
-  repaso:   [['hoy','Para hoy'], ['prox','Lo que viene'], ['mazo','Todo el mazo']]
+  repaso:   [['hoy','Para hoy'], ['prox','Lo que viene'], ['mazo','Todo el mazo'],
+             ['cfg','Cómo repasás cada UC'], ['fin','Ya dominados']]
 };
 
 function layout(vista){
@@ -2421,34 +2438,88 @@ function borrarExtra(diaId, j, esMeta){
    Cada día aparece SOLO lo que vence, no todo el mazo.
    ========================================================= */
 const INTERVALOS = [1, 3, 7, 16, 35];
+const RITMOS = [['0.6','Denso'], ['1','Normal'], ['1.5','Liviano']];
+
+/* configuración por unidad curricular */
+function repcfg(uc){
+  if(!db.repcfg[uc]) db.repcfg[uc] = {};
+  const c = db.repcfg[uc];
+  if(c.ritmo == null) c.ritmo = 1;
+  if(c.max == null)   c.max = 3;
+  if(c.off == null)   c.off = false;
+  return c;
+}
+
+/* la fecha de la próxima revisión o control de esa UC */
+function topeUC(uc){
+  const f = instancias(uc).map(x => x.f).filter(x => x && dias(x) > 0).sort();
+  return f.length ? f[0] : null;
+}
+
+/* cuándo vuelve un tema, mirando el ritmo de la UC y la fecha del examen */
+function proximaFecha(uc, nivel){
+  const c = repcfg(uc);
+  const base = INTERVALOS[Math.min(nivel, INTERVALOS.length - 1)];
+  let n = Math.max(1, Math.round(base * (+c.ritmo || 1)));
+  const tope = topeUC(uc);
+  if(tope){
+    const hasta = dias(tope) - 1;          /* el día antes del examen, como mucho */
+    if(hasta >= 1 && n > hasta) n = hasta;
+  }
+  return masDias(n);
+}
 const hoyISO = () => HOY.getFullYear() + '-' + String(HOY.getMonth()+1).padStart(2,'0') +
                      '-' + String(HOY.getDate()).padStart(2,'0');
 function masDias(n){
   const d = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() + n);
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-const vencen  = () => db.repaso.filter(r => dias(r.prox) <= 0).sort((a,b) => a.prox < b.prox ? -1 : 1);
-const futuros = () => db.repaso.filter(r => dias(r.prox) > 0).sort((a,b) => a.prox < b.prox ? -1 : 1);
+const vivos   = () => db.repaso.filter(r => !r.fin && !repcfg(r.uc).off);
+const vencen  = () => vivos().filter(r => dias(r.prox) <= 0).sort((a,b) => a.prox < b.prox ? -1 : 1);
+const futuros = () => vivos().filter(r => dias(r.prox) > 0).sort((a,b) => a.prox < b.prox ? -1 : 1);
+
+/* si una UC tiene tope de temas por día, el resto espera */
+function paraHoy(){
+  const cuenta = {}, hoy = [], espera = [];
+  vencen().forEach(r => {
+    const max = +repcfg(r.uc).max || 3;
+    cuenta[r.uc] = (cuenta[r.uc] || 0) + 1;
+    (cuenta[r.uc] <= max ? hoy : espera).push(r);
+  });
+  return {hoy, espera};
+}
 
 function bolitas(nivel){
   return '<span class="niv">' + INTERVALOS.map((_, i) =>
     `<i class="${i < nivel ? 'on' : ''}"></i>`).join('') + '</span>';
 }
 
-function repasado(id, bien){
+/* como te fue: 'costo' | 'esfuerzo' | 'domino' | 'fin' */
+function repasado(id, como){
   const r = db.repaso.find(x => x.id === id);
   if(!r) return;
-  if(bien){
-    r.nivel = Math.min(INTERVALOS.length, (r.nivel || 0) + 1);
-    /* nivel 1 = ya lo repasaste una vez, así que toca el intervalo SIGUIENTE */
-    r.prox  = masDias(INTERVALOS[Math.min(r.nivel, INTERVALOS.length - 1)]);
-  } else {
-    r.nivel = Math.max(1, (r.nivel || 1) - 1);
-    r.prox  = masDias(1);
-  }
-  r.ult = hoyISO();
+  if(como === 'fin'){ r.fin = true; r.ult = hoyISO(); save(); pintar(); return; }
+
+  if(como === 'costo')         r.nivel = Math.max(0, (r.nivel || 0) - 1);
+  else if(como === 'domino')   r.nivel = Math.min(INTERVALOS.length, (r.nivel || 0) + 2);
+  else                         r.nivel = Math.min(INTERVALOS.length, (r.nivel || 0) + 1);
+
+  r.prox  = (como === 'costo') ? masDias(1) : proximaFecha(r.uc, r.nivel);
+  r.ult   = hoyISO();
+  r.como  = como;
   r.veces = (r.veces || 0) + 1;
   save(); pintar();
+}
+
+function hojaObs(id){
+  const r = db.repaso.find(x => x.id === id); if(!r) return;
+  abrirHoja('Observación · ' + r.t, `
+    <p class="pista">Qué te trabó, o qué querés tener presente la próxima vez.</p>
+    <div class="campo"><label>Tu observación</label>
+      <textarea id="f-o" placeholder="Ej: me confundo poliarquía con democracia">${esc(r.obs || '')}</textarea></div>
+  `, {
+    ok(){ r.obs = $('#f-o').value.trim(); save(); pintar(); }
+  });
 }
 function moverRepaso(id, n){
   const r = db.repaso.find(x => x.id === id);
@@ -2464,16 +2535,19 @@ function agregarRepaso(){
       <select id="f-uc">${ucs.map(k => `<option value="${k}">${MAT[k].e} ${esc(MAT[k].n)}</option>`).join('')}</select></div>
     <div class="campo"><label>Tema</label>
       <input id="f-t" placeholder="Ej: Capítulo I · Política y poder"></div>
-    <p class="pista">Mandalo el día que lo estudiaste. Vuelve mañana, y después
-      a los 3, 7, 16 y 35 días si lo vas sabiendo.</p>
+    <div class="campo"><label>Observación (opcional)</label>
+      <textarea id="f-o" placeholder="Ej: la parte de los multiplicadores no me cierra"></textarea></div>
+    <p class="pista">Mandalo el día que lo estudiaste. Vuelve mañana, y después a los 3, 7, 16 y 35 días
+      si lo vas sabiendo. Si hay una revisión cerca, se adelanta solo para que llegue repasado.</p>
   `, {
     ok(){
       const t = $('#f-t').value.trim();
       if(!t){ alert('Escribí de qué tema es.'); return false; }
+      const uc = $('#f-uc').value;
       db.repaso.push({
         id: 'r' + Math.random().toString(36).slice(2,7),
-        uc: $('#f-uc').value, t, nivel: 0, veces: 0,
-        prox: masDias(1), ult: hoyISO()
+        uc, t, nivel: 0, veces: 0, obs: $('#f-o').value.trim(),
+        prox: proximaFecha(uc, 0), ult: hoyISO()
       });
       save(); pintar();
     }
@@ -2482,24 +2556,29 @@ function agregarRepaso(){
 
 function filaRepaso(r, conBotones){
   const m = MAT[r.uc] || {n:'?', e:'📌', c:'#BCAEDC'};
-  const d = dias(r.prox);
+  const d = dias(r.prox), tp = topeUC(r.uc);
   const cuando2 = d < 0 ? 'vencido hace ' + (-d) + (d === -1 ? ' día' : ' días')
                 : d === 0 ? 'para hoy' : (d === 1 ? 'mañana' : 'en ' + d + ' días');
   return `<div class="rp ${d < 0 ? 'vencido' : ''}" style="border-left-color:${m.c}">
     <button class="tx" data-rpedit="${r.id}">
       <b>${m.e} ${esc(r.t)}</b>
-      <span>${esc(m.n)} · ${cuando2} · repasado ${r.veces || 0} ${(r.veces===1?'vez':'veces')}${bolitas(r.nivel||0)}</span>
+      <span>${esc(m.n)} · ${cuando2} · repasado ${r.veces || 0} ${(r.veces===1?'vez':'veces')}${bolitas(r.nivel||0)}${
+        tp && dias(r.prox) >= dias(tp) - 1 ? '<span class="rp-tope">antes del examen</span>' : ''}</span>
+      ${r.obs ? `<span class="rp-obs">📝 ${esc(r.obs)}</span>` : ''}
     </button>
+    <button class="bt mas" data-rpobs="${r.id}" title="Observación">📝</button>
     ${conBotones
-      ? `<button class="bt no" data-rpno="${r.id}" title="Me costó">↻</button>
-         <button class="bt si" data-rpsi="${r.id}" title="Lo supe">✓</button>
-         <button class="bt mas" data-rpmas="${r.id}" title="Hoy no">⏭</button>`
+      ? `<button class="bt no"  data-rpc="costo|${r.id}"    title="Me costó">😰</button>
+         <button class="bt si"  data-rpc="esfuerzo|${r.id}" title="Salió con esfuerzo">🙂</button>
+         <button class="bt si"  data-rpc="domino|${r.id}"   title="Lo domino">😎</button>
+         <button class="bt mas" data-rpmas="${r.id}"        title="Hoy no">⏭</button>`
       : `<button class="bt mas" data-rphoy="${r.id}" title="Traerlo a hoy">↑</button>`}
   </div>`;
 }
 
 function renderRepaso(){
-  const hoyR = vencen(), fut = futuros();
+  const {hoy: hoyR, espera} = paraHoy();
+  const fut = futuros();
 
   const S = {};
   S.hoy = `<div class="card">
@@ -2509,8 +2588,10 @@ function renderRepaso(){
     </div>
     ${hoyR.length
       ? `<p class="foco" style="margin:2px 0 12px">Tapá el material, contestá de memoria, y recién ahí mirá.
-         <b>✓</b> si te salió · <b>↻</b> si te costó · <b>⏭</b> si hoy preferís otra.</p>
-         ${hoyR.map(r => filaRepaso(r, true)).join('')}`
+         <b>😰</b> me costó · <b>🙂</b> con esfuerzo · <b>😎</b> lo domino · <b>⏭</b> hoy prefiero otra.</p>
+         ${hoyR.map(r => filaRepaso(r, true)).join('')}
+         ${espera.length ? `<p class="foco" style="margin:10px 0 0">Otros ${espera.length}
+            quedaron para mañana para no saturarte. Podés subir el tope por materia más abajo.</p>` : ''}`
       : '<p class="rp-vacio">No te toca repasar nada hoy 🌷<br>Aprovechá para adelantar material nuevo.</p>'}
     <div class="btn-row" style="margin-top:10px">
       <button class="btn ghost mini" data-rpadd="1">＋ Mandar un tema al repaso</button>
@@ -2548,6 +2629,35 @@ function renderRepaso(){
             .map(r => filaRepaso(r, false)).join('')}</div>` : ''}
       </div>`;
     }).join('') + '</div>';
+  }
+
+  S.cfg = `<div class="card">
+    <div class="eyebrow">Cómo repasás cada UC</div>
+    <p class="foco" style="margin:6px 0 10px"><b>Ritmo</b>: denso acorta los intervalos, liviano los alarga.
+      <b>Máx</b>: cuántos temas de esa materia como mucho por día.</p>
+    ${cursando().map(k => {
+      const c = repcfg(k), m = MAT[k];
+      const n = db.repaso.filter(r => r.uc === k && !r.fin).length;
+      return `<div class="cfg-uc ${c.off ? 'rp-fin' : ''}">
+        <b>${m.e} ${esc(m.n)}<br><span class="muted" style="font-size:11px">${n} tema${n===1?'':'s'} en el mazo</span></b>
+        <select data-rcf="${k}|ritmo">${RITMOS.map(([v,t]) =>
+          `<option value="${v}" ${(+c.ritmo)===(+v)?'selected':''}>${t}</option>`).join('')}</select>
+        <input type="number" min="1" max="9" value="${c.max}" data-rcf="${k}|max">
+        <button class="bt mas" data-rcoff="${k}" title="Entra o no en la rotación">${c.off ? '🚫' : '👁'}</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  const term = db.repaso.filter(r => r.fin);
+  if(term.length){
+    S.fin = `<div class="card"><div class="eyebrow">Ya dominados</div>
+      <p class="foco" style="margin:6px 0 10px">${term.length} tema${term.length===1?'':'s'} fuera de la rotación.
+        Van a volver igual en la semana previa a la revisión.</p>
+      ${term.map(r => `<div class="rp rp-fin" style="border-left-color:${(MAT[r.uc]||{}).c || '#BCAEDC'}">
+        <button class="tx" data-rpedit="${r.id}"><b>${(MAT[r.uc]||{}).e || '📌'} ${esc(r.t)}</b>
+          <span>${esc((MAT[r.uc]||{}).n || '')} · dominado</span></button>
+        <button class="bt mas" data-rprev="${r.id}" title="Devolverlo a la rotación">↩️</button>
+      </div>`).join('')}</div>`;
   }
 
   $('#v-repaso').innerHTML = (editando ? AVISO : '') + pintarSecciones('repaso', S);
@@ -2588,7 +2698,7 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-motivo],[data-motivo2],[data-motivo3],[data-rpadd],[data-rpsi],[data-rpno],[data-rpmas],[data-rphoy],[data-rpedit],[data-rpdel],[data-accr],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-motivo],[data-motivo2],[data-motivo3],[data-rpc],[data-rpobs],[data-rcoff],[data-rprev],[data-rpadd],[data-rpsi],[data-rpno],[data-rpmas],[data-rphoy],[data-rpedit],[data-rpdel],[data-accr],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
 
   /* --- materias, título y descargas --- */
@@ -2612,6 +2722,19 @@ document.addEventListener('click', ev => {
   if(t.dataset.rpmas){ moverRepaso(t.dataset.rpmas, 1); return; }
   if(t.dataset.rphoy){ moverRepaso(t.dataset.rphoy, 0); return; }
   if(t.dataset.accr){ abiertaR = (abiertaR === t.dataset.accr) ? null : t.dataset.accr; renderRepaso(); return; }
+  if(t.dataset.rpc){
+    const [como, id] = t.dataset.rpc.split('|');
+    repasado(id, como); return;
+  }
+  if(t.dataset.rpobs){ hojaObs(t.dataset.rpobs); return; }
+  if(t.dataset.rcoff){
+    const c = repcfg(t.dataset.rcoff); c.off = !c.off; save(); pintar(); return;
+  }
+  if(t.dataset.rprev){
+    const r = db.repaso.find(x => x.id === t.dataset.rprev);
+    if(r){ r.fin = false; r.prox = hoyISO(); save(); pintar(); }
+    return;
+  }
   if(t.dataset.rpedit){
     const r = db.repaso.find(x => x.id === t.dataset.rpedit); if(!r) return;
     abrirHoja('Editar tema del repaso', `
@@ -2907,6 +3030,12 @@ document.addEventListener('change', ev => {
   }
   if(ev.target.id === 'f-tipo'){
     const o = $('#f-horas'); if(o) o.classList.toggle('hidden', ev.target.value === 'libre');
+  }
+  if(ev.target.dataset && ev.target.dataset.rcf){
+    const [k, campo] = ev.target.dataset.rcf.split('|');
+    const v = ev.target.value;
+    repcfg(k)[campo] = campo === 'max' ? Math.max(1, Math.min(9, +v || 3)) : +v;
+    save(); renderRepaso(); return;
   }
   if(ev.target.dataset && ev.target.dataset.nt){
     const [k, id, campo] = ev.target.dataset.nt.split('|');
