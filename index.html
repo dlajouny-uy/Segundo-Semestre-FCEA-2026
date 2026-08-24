@@ -562,41 +562,42 @@ const MAT_BASE = {
 };
 let MAT = JSON.parse(JSON.stringify(MAT_BASE));
 
+const RUTINA_V = 2;   /* al subir este número, la rutina se rearma con lo de abajo */
 const DIAS_BASE = [
-  {id:'lun', n:'Lunes', e:'🌷', foco:'AYGO II + dejar Derecho al día', bloques:[
+  {id:'lun', n:'Lunes', e:'🌷', foco:'AYGO II + arrancar GG1 de la semana', bloques:[
     {i:'12:00', f:'14:00', m:'der',    t:'Clase',              d:'Durante el trabajo'},
     {i:'19:00', f:'21:00', m:'aygo',   t:'Clase',              d:'Resumen en paralelo'},
-    {i:'21:00', f:'22:00', m:'der',    t:'Resumen de la clase',d:''},
-    {i:'22:00', f:'22:30', m:'margen', t:'Margen',             d:'Completar pendiente / ordenar'}
+    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'}
   ]},
-  {id:'mar', n:'Martes', e:'🩷', foco:'Economía + mantener contacto con GG1', bloques:[
+  {id:'mar', n:'Martes', e:'🩷', foco:'Economía + Ciencia Política', bloques:[
     {i:'19:00', f:'21:00', m:'eco',    t:'Clase',              d:''},
     {i:'21:00', f:'22:00', m:'eco',    t:'Procesar clase anterior', d:'Resumen'},
-    {i:'22:00', f:'22:30', m:'gg1',    t:'Avance corto',       d:'No perder el hilo'}
+    {i:'22:00', f:'22:30', m:'cpol',   t:'Avance corto',       d:'Bibliografía / resumen'}
   ]},
   {id:'mie', n:'Miércoles', e:'🦋', foco:'AYGO II + GG1', bloques:[
     {i:'08:00', f:'10:00', m:'macro',  t:'Clase de fondo',     d:'Escuchar mientras trabajás'},
     {i:'19:00', f:'21:00', m:'aygo',   t:'Clase',              d:'Resumen en paralelo'},
-    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Teoría / resumen / práctica'}
+    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'}
   ]},
-  {id:'jue', n:'Jueves', e:'🌸', foco:'Economía al día + GG1', bloques:[
+  {id:'jue', n:'Jueves', e:'🌸', foco:'Economía al día + Derecho', bloques:[
     {i:null, f:null, m:'eco', t:'Cerrar resumen pendiente', d:'Antes de las 19:00, si quedó algo', libre:true},
     {i:'19:00', f:'21:00', m:'eco',    t:'Clase',              d:''},
-    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Resumen / práctico'}
+    {i:'21:00', f:'22:00', m:'der',    t:'Resumen de la clase',d:'La del lunes'},
+    {i:'22:00', f:'22:30', m:'margen', t:'Margen',             d:'Completar pendiente / ordenar'}
   ]},
-  {id:'vie', n:'Viernes', e:'🪻', foco:'Cálculo + Macro', bloques:[
+  {id:'vie', n:'Viernes', e:'🪻', foco:'Cálculo + cerrar GG1 de la semana', bloques:[
     {i:'08:00', f:'10:00', m:'macro',  t:'Clase de fondo',     d:'Escuchar mientras trabajás'},
     {i:'19:00', f:'20:30', m:'calc',   t:'Manual + grabadas',  d:'Ejercicios'},
     {i:'20:30', f:'20:45', pausa:true, t:'Descanso / cena ☕'},
-    {i:'20:45', f:'22:00', m:'macro',  t:'Estudiar + resumir', d:'La clase de la mañana'},
-    {i:'22:00', f:'22:30', m:'margen', t:'Margen',             d:''}
+    {i:'20:45', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'}
   ]},
   {id:'sab', n:'Sábado', e:'🧁', flex:true, foco:'Sin horarios: elegís vos cuándo', metas:[
-    {m:'gg1',  min:120, tareas:['Continuar clases del curso','Completar resúmenes','Avanzar en el práctico','Resolver ejercicios pendientes']},
-    {m:'calc', min:120, tareas:['Continuar manual / clases grabadas','Resolver ejercicios','Entender antes de avanzar']}
+    {m:'gg1',  min:120, tareas:['Ponerte al día con lo de la semana','Completar resúmenes','Avanzar en el práctico','Resolver ejercicios pendientes']},
+    {m:'calc', min:120, tareas:['Continuar manual / clases grabadas','Resolver ejercicios','Entender antes de avanzar']},
+    {m:'macro', min:75, tareas:['Estudiar las clases de fondo de la semana','Resumir lo escuchado']}
   ], nota:'Si GG1 viene pesada esta semana, dale más tiempo 🎀'},
   {id:'dom', n:'Domingo', e:'🩰', flex:true, foco:'Bloque flexible + cierre de semana', metas:[
-    {m:'cpol', min:90, tareas:['Avanzar bibliografía / temario','Hacer resumen','Clase grabada si necesitás reforzar']},
+    {m:'cpol', min:60, tareas:['Avanzar bibliografía / temario','Hacer resumen','Clase grabada si necesitás reforzar']},
     {m:'rev',  min:45, tareas:[], checklist:[
       'Ver qué quedó pendiente',
       'Comprobar que los resúmenes estén al día',
@@ -615,7 +616,7 @@ function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?
 function rawSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 
 const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, notas:{},
-                 pend:[], mats:{}, layout:{}, titulo:'Mi semestre', rutina:null, ts:0};
+                 pend:[], mats:{}, layout:{}, titulo:'Mi semestre', rutina:null, rutinaV:0, ts:0};
 let db = (()=>{ try{ return Object.assign({}, DB_BASE, JSON.parse(raw(KEY)||'{}')); }catch(e){ return {...DB_BASE}; } })();
 function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPronto(); }
 
@@ -674,6 +675,8 @@ function ordenarDia(d){
 
 function normalizarRutina(){
   if(!Array.isArray(db.rutina) || db.rutina.length !== 7) db.rutina = semillaRutina();
+  let reArmada = false;
+  if(db.rutinaV !== RUTINA_V){ db.rutina = semillaRutina(); db.rutinaV = RUTINA_V; reArmada = true; }
   db.rutina.forEach(d => {
     if(d.flex){
       if(!Array.isArray(d.metas)) d.metas = [];
@@ -688,6 +691,8 @@ function normalizarRutina(){
     }
   });
   DIAS = db.rutina;
+  /* el guardado va al final del ciclo: acá todavía no arrancó la sincronización */
+  if(reArmada) setTimeout(() => save(), 0);
   cargarMats();
   if(!db.layout) db.layout = {};
   if(!db.notas) db.notas = {};
@@ -715,6 +720,7 @@ function sem(k){
   if(!db.semanas[k].check) db.semanas[k].check = {};
   if(!db.semanas[k].min)   db.semanas[k].min   = {};
   if(!db.semanas[k].salt)  db.semanas[k].salt  = {};
+  if(!db.semanas[k].motivo) db.semanas[k].motivo = {};
   return db.semanas[k];
 }
 
@@ -995,7 +1001,7 @@ function cardDia(d, solo){
       </span>
       ${act && !off ? '<span class="flag">ahora</span>' : ''}
       ${b.tmp ? '<span class="chip-tmp">solo esta semana</span>' : ''}
-      ${off ? '<span class="chip-salt">lo dejaste pasar</span>' : ''}
+      ${off ? `<span class="chip-salt">${esc(sem().motivo[idb] || 'lo dejaste pasar')}</span>` : ''}
       ${editando && !b.tmp
           ? `<button class="bq-ico on" data-bdel="${d.id}|${j}" title="Borrar">🗑️</button>`
           : `<button class="bq-ico ${b.nota?'on':''}" data-nota="${d.id}|${j}" title="Nota">📝</button>
@@ -1289,6 +1295,12 @@ function renderProgreso(){
     });
     h += `<div class="card">
       <div class="eyebrow">Esta semana</div>
+      ${(() => {
+        const ms = Object.values(sAct.motivo || {});
+        return ms.length
+          ? `<p class="foco" style="margin:6px 0 8px">${ms.length} no dependió de vos:
+             <b>${esc([...new Set(ms)].join(' · '))}</b>.</p>` : '';
+      })()}
       <p class="foco" style="margin:6px 0 0">Dejaste pasar <b>${nSalt} cosa${nSalt>1?'s':''}</b>
         (${hs(minSalt)}). No cuentan en el porcentaje, ni a favor ni en contra.
         El lunes vuelven solos a la rutina.</p>
@@ -2178,8 +2190,39 @@ function hojaSaltar(diaId, j, esMeta){
       <b>🍃 Esta semana no va</b>
       <span>Lo dejo pasar y listo. No queda debiendo nada.</span>
     </button>
-    <p class="pista" style="margin-top:4px">En los dos casos deja de contar en contra del porcentaje de la semana.
-      El lunes que viene vuelve sola.</p>
+    ${esMeta ? '' : `<button class="hoja-op" data-motivo="${diaId}|${j}">
+      <b>🚫 No hubo, o no pude ir</b>
+      <span>Feriado, faltó el docente, se suspendió… No fue decisión tuya.</span>
+    </button>`}
+    <p class="pista" style="margin-top:4px">En todos los casos deja de contar en contra del porcentaje
+      de la semana. El lunes que viene vuelve sola.</p>
+  `, {ok(){ return; }});
+  const g = $('#hoja').querySelector('[data-hok]'); if(g) g.remove();
+}
+
+
+const MOTIVOS = [
+  ['feriado',            '🎉 Feriado',            'No hubo clase por feriado'],
+  ['faltó el docente',   '👩‍🏫 Faltó el docente',  'Se cayó la clase'],
+  ['se suspendió',       '❌ Se suspendió',        'La suspendieron'],
+  ['no hubo clase',      '📭 No hubo clase',      'Sin actividad ese día'],
+  ['no pude ir',         '🙅 No pude ir',         'Me surgió otra cosa']
+];
+
+function hojaMotivo(diaId, j){
+  const d = dia(diaId); if(!d) return;
+  const r = refBloque(d, j); if(!r) return;
+  const m = matB(r.b);
+  abrirHoja(m.e + ' ' + m.n + (r.b.i ? ' · ' + r.b.i : ''), `
+    <p class="pista">¿Qué pasó?</p>
+    ${MOTIVOS.map(([k, tit, sub]) => `<button class="hoja-op" data-motivo2="${esc(k)}|${diaId}|${j}">
+      <b>${tit}</b><span>${sub}</span></button>`).join('')}
+    <div class="campo" style="margin-top:12px"><label>Otro motivo</label>
+      <div class="dos">
+        <input id="f-mot" placeholder="Escribilo vos">
+        <button class="btn ghost mini" data-motivo3="${diaId}|${j}" style="flex:0 0 92px;margin:0">Usar este</button>
+      </div>
+    </div>
   `, {ok(){ return; }});
   const g = $('#hoja').querySelector('[data-hok]'); if(g) g.remove();
 }
@@ -2191,9 +2234,11 @@ function aplicarSalto(modo, diaId, j, esMeta){
   const s = sem(), m = matB(cosa);
   const id = esMeta ? saltMeta(d, cosa) : bid(d, j, cosa);
 
-  if(modo === 'volver'){ delete s.salt[id]; }
+  if(modo === 'volver'){ delete s.salt[id]; delete s.motivo[id]; }
   else {
     s.salt[id] = true;
+    if(modo.indexOf('motivo:') === 0) s.motivo[id] = modo.slice(7);
+    else delete s.motivo[id];
     if(!esMeta) delete s.check[id];   /* los minutos ya hechos de una meta NO se borran */
     if(modo === 'pend'){
       db.pend.push({
@@ -2345,7 +2390,7 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-motivo],[data-motivo2],[data-motivo3],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
 
   /* --- materias, título y descargas --- */
@@ -2470,6 +2515,20 @@ document.addEventListener('click', ev => {
     const [modo,d0,j0] = t.dataset.msalt2.split('|');
     cerrarHoja(); aplicarSalto(modo, d0, +j0, true); return;
   }
+  if(t.dataset.motivo){
+    const [d0,j0] = t.dataset.motivo.split('|');
+    cerrarHoja(); hojaMotivo(d0, +j0); return;
+  }
+  if(t.dataset.motivo2){
+    const [mot,d0,j0] = t.dataset.motivo2.split('|');
+    cerrarHoja(); aplicarSalto('motivo:' + mot, d0, +j0, false); return;
+  }
+  if(t.dataset.motivo3){
+    const [d0,j0] = t.dataset.motivo3.split('|');
+    const v = ($('#f-mot') && $('#f-mot').value.trim()) || '';
+    if(!v){ alert('Escribí el motivo.'); return; }
+    cerrarHoja(); aplicarSalto('motivo:' + v, d0, +j0, false); return;
+  }
   if(t.dataset.bedit){ const [d0,j0] = t.dataset.bedit.split('|'); editarBloque(d0, +j0); return; }
   if(t.dataset.badd){ editarBloque(t.dataset.badd, -1); return; }
   if(t.dataset.bdel){
@@ -2563,7 +2622,7 @@ document.addEventListener('click', ev => {
   }
   if(t.id === 'b-rutina'){
     if(confirm('¿Volver a la rutina original? Se pierden los cambios que hiciste en los días. Los tildes y el temario no se tocan.')){
-      db.rutina = null; normalizarRutina(); save(); pintar();
+      db.rutina = null; db.rutinaV = 0; normalizarRutina(); save(); pintar();
     }
     return;
   }
