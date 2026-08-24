@@ -597,7 +597,8 @@ const MAT_BASE = {
   macro:  {n:'Macroeconomía',        e:'📊', c:'#F5B75C', prio:6},
   cpol:   {n:'Ciencia Política',     e:'🏛️', c:'#CE9AEA', prio:7},
   margen: {n:'Margen',               e:'🌙', c:'#BCAEDC'},
-  rev:    {n:'Revisión semanal',     e:'🗓️', c:'#F09BCF'}
+  rev:    {n:'Revisión semanal',     e:'🗓️', c:'#F09BCF'},
+  rep:    {n:'Repaso',               e:'🔁', c:'#B196EE'}
 };
 let MAT = JSON.parse(JSON.stringify(MAT_BASE));
 
@@ -1035,7 +1036,9 @@ function cardDia(d, solo){
     }
     if(b.pausa){
       h += `<div class="hueco" style="height:auto;padding:3px 0;gap:6px">☕ ${b.i||''} · ${esc(b.t)}
-        ${editando ? `<button class="lapiz" data-bedit="${d.id}|${j}">✏️</button>
+        ${editando ? `<button class="lapiz" data-bup="${d.id}|${j}">↑</button>
+                      <button class="lapiz" data-bdn="${d.id}|${j}">↓</button>
+                      <button class="lapiz" data-bedit="${d.id}|${j}">✏️</button>
                       <button class="lapiz" data-bdel="${d.id}|${j}">🗑️</button>` : ''}</div>`;
       if(b.f) prevFin = mins(b.f);
       return;
@@ -1055,6 +1058,9 @@ function cardDia(d, solo){
       ${act && !off ? '<span class="flag">ahora</span>' : ''}
       ${b.tmp ? '<span class="chip-tmp">solo esta semana</span>' : ''}
       ${off ? `<span class="chip-salt">${esc(sem().motivo[idb] || 'lo dejaste pasar')}</span>` : ''}
+      ${editando
+          ? `<button class="bq-ico on" data-bup="${d.id}|${j}" title="Subirlo">↑</button>
+             <button class="bq-ico on" data-bdn="${d.id}|${j}" title="Bajarlo">↓</button>` : ''}
       ${editando && !b.tmp
           ? `<button class="bq-ico on" data-bdel="${d.id}|${j}" title="Borrar">🗑️</button>`
           : `<button class="bq-ico ${b.nota?'on':''}" data-nota="${d.id}|${j}" title="Nota">📝</button>
@@ -1073,7 +1079,7 @@ function cardDia(d, solo){
 /* =========================================================
    6. VISTA · SEMANA
    ========================================================= */
-const AVISO = `<div class="aviso-edit">✏️<span>Modo edición: tocá un bloque para cambiarlo o usá ＋ para agregar. Con ↑↓ movés las tarjetas, con 👁 las ocultás y con ⇔ las ponés a media pantalla.</span></div>`;
+const AVISO = `<div class="aviso-edit">✏️<span>Modo edición: tocá un bloque para cambiarlo, ↑↓ lo mueve de lugar cambiándole la hora, y 🗑️ lo borra. En las tarjetas, ↑↓ las reordena, 👁 las oculta y ⇔ las pone a media pantalla.</span></div>`;
 
 function renderSemana(){
   $('#v-semana').innerHTML = (editando ? AVISO : '') + '<div class="grid">' +
@@ -2684,6 +2690,50 @@ function cardRepasoHoy(){
   </div>`;
 }
 
+
+/* =========================================================
+   19. MOVER UN BLOQUE DE LUGAR
+   Intercambia el horario con el vecino, respetando cuánto
+   dura cada uno y el hueco que haya entre ellos.
+   ========================================================= */
+const aHora = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+
+function moverBloque(diaId, j, dir){
+  const d = dia(diaId); if(!d) return;
+  const lista = bloquesDe(d);
+  const k = j + dir;
+  if(k < 0 || k >= lista.length) return;
+
+  const iA = Math.min(j, k), iB = Math.max(j, k);
+  const A = refBloque(d, iA), B = refBloque(d, iB);
+  if(!A || !B) return;
+
+  if(!A.b.i || !A.b.f || !B.b.i || !B.b.f){
+    alert('Los bloques sin hora fija van siempre arriba. Ponele horario si querés moverlo.');
+    return;
+  }
+
+  const ini   = aMin(A.b.i);
+  const durA  = aMin(A.b.f) - ini;
+  const durB  = aMin(B.b.f) - aMin(B.b.i);
+  const hueco = aMin(B.b.i) - aMin(A.b.f);
+
+  if(ini + durB + hueco + durA > 24*60){
+    alert('No entran en el día si los das vuelta. Cambiales la hora a mano.');
+    return;
+  }
+
+  /* B pasa a ir primero */
+  B.b.i = aHora(ini);
+  B.b.f = aHora(ini + durB);
+  const ini2 = ini + durB + hueco;
+  A.b.i = aHora(ini2);
+  A.b.f = aHora(ini2 + durA);
+
+  if(A.tmp || B.tmp){ ordenarDia(d); save(); pintar(); }
+  else guardarRutina(d);
+}
+
 /* =========================================================
    9. EVENTOS
    ========================================================= */
@@ -2698,7 +2748,7 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-motivo],[data-motivo2],[data-motivo3],[data-rpc],[data-rpobs],[data-rcoff],[data-rprev],[data-rpadd],[data-rpsi],[data-rpno],[data-rpmas],[data-rphoy],[data-rpedit],[data-rpdel],[data-accr],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-motivo],[data-motivo2],[data-motivo3],[data-rpc],[data-rpobs],[data-rcoff],[data-rprev],[data-rpadd],[data-rpsi],[data-rpno],[data-rpmas],[data-rphoy],[data-rpedit],[data-rpdel],[data-accr],[data-bedit],[data-bdel],[data-badd],[data-bup],[data-bdn],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
 
   /* --- materias, título y descargas --- */
@@ -2895,6 +2945,8 @@ document.addEventListener('click', ev => {
     }
     return;
   }
+  if(t.dataset.bup){ const [d0,j0] = t.dataset.bup.split('|'); moverBloque(d0, +j0, -1); return; }
+  if(t.dataset.bdn){ const [d0,j0] = t.dataset.bdn.split('|'); moverBloque(d0, +j0, 1); return; }
   if(t.dataset.xadddia){ agregarSuelto(t.dataset.xadddia); return; }
   if(t.dataset.xbdel){ const [d0,j0] = t.dataset.xbdel.split('|'); borrarExtra(d0, +j0, false); return; }
   if(t.dataset.xmdel){ const [d0,j0] = t.dataset.xmdel.split('|'); borrarExtra(d0, +j0, true); return; }
