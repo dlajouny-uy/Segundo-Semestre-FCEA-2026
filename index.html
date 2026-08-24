@@ -75,11 +75,11 @@ nav.tabs{
   border-top:1px solid var(--line);
 }
 nav.tabs button{
-  flex:1;border-radius:14px;padding:6px 2px;font-size:9.5px;font-weight:700;letter-spacing:-.01em;
+  flex:1;border-radius:13px;padding:6px 1px;font-size:8.8px;font-weight:700;letter-spacing:-.02em;
   color:var(--soft);display:flex;flex-direction:column;align-items:center;gap:3px;
   transition:background .2s,color .2s;
 }
-nav.tabs button i{font-style:normal;font-size:17px;line-height:1}
+nav.tabs button i{font-style:normal;font-size:16px;line-height:1}
 nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 
 /* ---------- tarjetas ---------- */
@@ -490,6 +490,30 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
 .hoja-op b{display:block;font-size:14.5px;font-weight:800;margin-bottom:2px}
 .hoja-op span{display:block;font-size:12px;font-weight:600;color:var(--soft);line-height:1.4}
 .hoja-op:active{transform:scale(.985)}
+/* ---------- repaso espaciado ---------- */
+.rp{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:15px;
+    background:var(--card2);margin-bottom:7px;border-left:4px solid var(--lav)}
+.rp .tx{flex:1;min-width:0;text-align:left;background:none;padding:0}
+.rp .tx b{display:block;font-size:13.5px;line-height:1.3}
+.rp .tx span{display:block;font-size:11.5px;color:var(--soft);font-weight:700;margin-top:2px}
+.rp .bt{flex:none;width:32px;height:32px;border-radius:11px;font-size:14px;
+        display:grid;place-items:center;background:var(--card)}
+.rp .bt.si{background:#DFF3EA;color:#2F8D6E}
+.rp .bt.no{background:#FFE6E9;color:#C9506A}
+.rp .bt.mas{background:var(--card);color:var(--soft);font-size:13px}
+[data-tema=noche] .rp .bt.si{background:#23453A;color:#7FD8B8}
+[data-tema=noche] .rp .bt.no{background:#4A2530;color:#FF9DB0}
+.rp.vencido{border-left-color:#E8607F}
+.niv{display:inline-flex;gap:2px;vertical-align:middle;margin-left:5px}
+.niv i{width:5px;height:5px;border-radius:50%;background:var(--line);display:block}
+.niv i.on{background:var(--menta)}
+.rp-dia{font-size:11px;font-weight:800;color:var(--soft);text-transform:uppercase;
+        letter-spacing:.05em;margin:14px 0 7px}
+.rp-dia:first-child{margin-top:0}
+.rp-vacio{text-align:center;padding:22px 10px;color:var(--soft);font-weight:600;font-size:13px}
+.rp-mini{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:13px;font-weight:600}
+.rp-mini b{flex:1;min-width:0}
+.rp-mini em{font-style:normal;font-size:11px;color:var(--soft);font-weight:700}
 .hidden{display:none}
 @media(min-width:860px){
   body{padding-bottom:24px}
@@ -529,6 +553,7 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
     <button data-v="materias"><i>📚</i>UC</button>
     <button data-v="fechas"><i>📅</i>Fechas</button>
     <button data-v="notas"><i>💯</i>Notas</button>
+    <button data-v="repaso"><i>🔁</i>Repaso</button>
     <button data-v="progreso"><i>💗</i>Progreso</button>
   </nav>
 
@@ -538,6 +563,7 @@ nav.tabs button.on{background:var(--card2);color:var(--rosa)}
     <section id="v-materias" class="hidden"></section>
     <section id="v-fechas" class="hidden"></section>
     <section id="v-notas" class="hidden"></section>
+    <section id="v-repaso" class="hidden"></section>
     <section id="v-progreso" class="hidden"></section>
   </main>
 </div>
@@ -562,28 +588,32 @@ const MAT_BASE = {
 };
 let MAT = JSON.parse(JSON.stringify(MAT_BASE));
 
-const RUTINA_V = 2;   /* al subir este número, la rutina se rearma con lo de abajo */
+const RUTINA_V = 3;   /* al subir este número, la rutina se rearma con lo de abajo */
 const DIAS_BASE = [
   {id:'lun', n:'Lunes', e:'🌷', foco:'AYGO II + arrancar GG1 de la semana', bloques:[
     {i:'12:00', f:'14:00', m:'der',    t:'Clase',              d:'Durante el trabajo'},
     {i:'19:00', f:'21:00', m:'aygo',   t:'Clase',              d:'Resumen en paralelo'},
-    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'}
+    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'},
+    {i:'22:30', f:'23:00', m:'rep',    t:'Repaso',             d:'Solo lo que vence hoy'}
   ]},
   {id:'mar', n:'Martes', e:'🩷', foco:'Economía + Ciencia Política', bloques:[
     {i:'19:00', f:'21:00', m:'eco',    t:'Clase',              d:''},
     {i:'21:00', f:'22:00', m:'eco',    t:'Procesar clase anterior', d:'Resumen'},
-    {i:'22:00', f:'22:30', m:'cpol',   t:'Avance corto',       d:'Bibliografía / resumen'}
+    {i:'22:00', f:'22:30', m:'cpol',   t:'Avance corto',       d:'Bibliografía / resumen'},
+    {i:'22:30', f:'23:00', m:'rep',    t:'Repaso',             d:'Solo lo que vence hoy'}
   ]},
   {id:'mie', n:'Miércoles', e:'🦋', foco:'AYGO II + GG1', bloques:[
     {i:'08:00', f:'10:00', m:'macro',  t:'Clase de fondo',     d:'Escuchar mientras trabajás'},
     {i:'19:00', f:'21:00', m:'aygo',   t:'Clase',              d:'Resumen en paralelo'},
-    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'}
+    {i:'21:00', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'},
+    {i:'22:30', f:'23:00', m:'rep',    t:'Repaso',             d:'Solo lo que vence hoy'}
   ]},
   {id:'jue', n:'Jueves', e:'🌸', foco:'Economía al día + Derecho', bloques:[
     {i:null, f:null, m:'eco', t:'Cerrar resumen pendiente', d:'Antes de las 19:00, si quedó algo', libre:true},
     {i:'19:00', f:'21:00', m:'eco',    t:'Clase',              d:''},
     {i:'21:00', f:'22:00', m:'der',    t:'Resumen de la clase',d:'La del lunes'},
-    {i:'22:00', f:'22:30', m:'margen', t:'Margen',             d:'Completar pendiente / ordenar'}
+    {i:'22:00', f:'22:30', m:'margen', t:'Margen',             d:'Completar pendiente / ordenar'},
+    {i:'22:30', f:'23:00', m:'rep',    t:'Repaso',             d:'Solo lo que vence hoy'}
   ]},
   {id:'vie', n:'Viernes', e:'🪻', foco:'Cálculo + cerrar GG1 de la semana', bloques:[
     {i:'08:00', f:'10:00', m:'macro',  t:'Clase de fondo',     d:'Escuchar mientras trabajás'},
@@ -592,17 +622,16 @@ const DIAS_BASE = [
     {i:'20:45', f:'22:30', m:'gg1',    t:'Curso',              d:'Clase del día + ejercicios'}
   ]},
   {id:'sab', n:'Sábado', e:'🧁', flex:true, foco:'Sin horarios: elegís vos cuándo', metas:[
-    {m:'gg1',  min:120, tareas:['Ponerte al día con lo de la semana','Completar resúmenes','Avanzar en el práctico','Resolver ejercicios pendientes']},
-    {m:'calc', min:120, tareas:['Continuar manual / clases grabadas','Resolver ejercicios','Entender antes de avanzar']},
-    {m:'macro', min:75, tareas:['Estudiar las clases de fondo de la semana','Resumir lo escuchado']}
-  ], nota:'Si GG1 viene pesada esta semana, dale más tiempo 🎀'},
+    {m:'calc',  min:120, tareas:['Continuar manual / clases grabadas','Resolver ejercicios','Entender antes de avanzar']},
+    {m:'macro', min:120, tareas:['Leer el resumen de las clases de la semana','Leer el material original','Hacer el quiz','Mandar los temas al repaso']}
+  ], nota:'GG1 ya la ves lunes, miércoles y viernes 🎀'},
   {id:'dom', n:'Domingo', e:'🩰', flex:true, foco:'Bloque flexible + cierre de semana', metas:[
-    {m:'cpol', min:60, tareas:['Avanzar bibliografía / temario','Hacer resumen','Clase grabada si necesitás reforzar']},
+    {m:'cpol', min:60, tareas:['Leer el resumen','Leer el material original','Hacer el quiz']},
     {m:'rev',  min:45, tareas:[], checklist:[
+      'Hacer el repaso que quedó vencido',
+      'Mandar al repaso los temas nuevos de la semana',
       'Ver qué quedó pendiente',
-      'Comprobar que los resúmenes estén al día',
-      'Revisar qué viene la semana que viene',
-      'Decidir dónde reforzar GG1 o Cálculo'
+      'Revisar qué viene la semana que viene'
     ]}
   ], nota:'Después de esto: domingo libre 🌸'}
 ];
@@ -616,7 +645,8 @@ function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?
 function rawSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
 
 const DB_BASE = {semanas:{}, temario:{}, revision:{}, controles:{}, notas:{},
-                 pend:[], mats:{}, layout:{}, titulo:'Mi semestre', rutina:null, rutinaV:0, ts:0};
+                 pend:[], mats:{}, layout:{}, repaso:[], titulo:'Mi semestre',
+                 rutina:null, rutinaV:0, ts:0};
 let db = (()=>{ try{ return Object.assign({}, DB_BASE, JSON.parse(raw(KEY)||'{}')); }catch(e){ return {...DB_BASE}; } })();
 function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPronto(); }
 
@@ -632,6 +662,7 @@ function save(){ db.ts = Date.now(); rawSet(KEY, JSON.stringify(db)); subirPront
   if(!db.notas) db.notas = {};
   if(!db.mats)  db.mats  = {};
   if(!db.layout) db.layout = {};
+  if(!Array.isArray(db.repaso)) db.repaso = [];
   if(!db.titulo) db.titulo = 'Mi semestre';
   if(!Array.isArray(db.pend)) db.pend = [];
   /* los controles necesitan id propio para poder colgarles la nota */
@@ -699,6 +730,7 @@ function normalizarRutina(){
   if(reArmada){ try{ rawSet(KEY, JSON.stringify(db)); }catch(e){} }
   cargarMats();
   if(!db.layout) db.layout = {};
+  if(!Array.isArray(db.repaso)) db.repaso = [];
   if(!db.notas) db.notas = {};
   if(!Array.isArray(db.pend)) db.pend = [];
   if(!db.controles) db.controles = {};
@@ -920,6 +952,7 @@ function renderHoy(){
   $('#v-hoy').innerHTML = (editando ? AVISO : '') + alerta + pintarSecciones('hoy', {
     hero,
     dia:  `<div class="card">${cardDia(d, true)}</div>`,
+    rep:  cardRepasoHoy(),
     pend: cardPendientes()
   });
 }
@@ -1039,7 +1072,7 @@ function cursando(){
   return Object.keys(MAT).filter(k => MAT[k].prio).sort((a,b) => MAT[a].prio - MAT[b].prio);
 }
 const MEDALLA = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣'];
-let abierta = null, abiertaF = null, abiertaN = null, diaSel = null, subAbierta = null;
+let abierta = null, abiertaF = null, abiertaN = null, abiertaR = null, diaSel = null, subAbierta = null;
 
 function rev(k){
   if(typeof db.revision[k] === 'string') db.revision[k] = {r1:db.revision[k], r2:''};
@@ -2108,11 +2141,12 @@ function bajarRespaldo(){
    ocultar o poner a media pantalla (en compu, lado a lado).
    ========================================================= */
 const SECCIONES = {
-  hoy:      [['hero','Lo que viene ahora'], ['dia','El día'], ['pend','Pendientes']],
+  hoy:      [['hero','Lo que viene ahora'], ['dia','El día'], ['rep','Repaso'], ['pend','Pendientes']],
   materias: [['ucs','Unidades curriculares'], ['agenda','Lo que viene']],
   fechas:   [['cal','Calendario'], ['sel','El día que tocaste'], ['prox','Lo que viene'],
              ['ucs','Instancias por UC'], ['pas','Ya pasaron']],
-  notas:    [['resumen','Resumen'], ['ucs','Unidades curriculares']]
+  notas:    [['resumen','Resumen'], ['ucs','Unidades curriculares']],
+  repaso:   [['hoy','Para hoy'], ['prox','Lo que viene'], ['mazo','Todo el mazo']]
 };
 
 function layout(vista){
@@ -2380,13 +2414,173 @@ function borrarExtra(diaId, j, esMeta){
   }
 }
 
+
+/* =========================================================
+   18. REPASO ESPACIADO
+   Intervalos que se agrandan: 1, 3, 7, 16 y 35 días.
+   Cada día aparece SOLO lo que vence, no todo el mazo.
+   ========================================================= */
+const INTERVALOS = [1, 3, 7, 16, 35];
+const hoyISO = () => HOY.getFullYear() + '-' + String(HOY.getMonth()+1).padStart(2,'0') +
+                     '-' + String(HOY.getDate()).padStart(2,'0');
+function masDias(n){
+  const d = new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() + n);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+const vencen  = () => db.repaso.filter(r => dias(r.prox) <= 0).sort((a,b) => a.prox < b.prox ? -1 : 1);
+const futuros = () => db.repaso.filter(r => dias(r.prox) > 0).sort((a,b) => a.prox < b.prox ? -1 : 1);
+
+function bolitas(nivel){
+  return '<span class="niv">' + INTERVALOS.map((_, i) =>
+    `<i class="${i < nivel ? 'on' : ''}"></i>`).join('') + '</span>';
+}
+
+function repasado(id, bien){
+  const r = db.repaso.find(x => x.id === id);
+  if(!r) return;
+  if(bien){
+    r.nivel = Math.min(INTERVALOS.length, (r.nivel || 0) + 1);
+    /* nivel 1 = ya lo repasaste una vez, así que toca el intervalo SIGUIENTE */
+    r.prox  = masDias(INTERVALOS[Math.min(r.nivel, INTERVALOS.length - 1)]);
+  } else {
+    r.nivel = Math.max(1, (r.nivel || 1) - 1);
+    r.prox  = masDias(1);
+  }
+  r.ult = hoyISO();
+  r.veces = (r.veces || 0) + 1;
+  save(); pintar();
+}
+function moverRepaso(id, n){
+  const r = db.repaso.find(x => x.id === id);
+  if(!r) return;
+  r.prox = n === 0 ? hoyISO() : masDias(Math.max(0, (dias(r.prox) || 0) + n));
+  save(); pintar();
+}
+
+function agregarRepaso(){
+  const ucs = cursando();
+  abrirHoja('Mandar un tema al repaso', `
+    <div class="campo"><label>Unidad curricular</label>
+      <select id="f-uc">${ucs.map(k => `<option value="${k}">${MAT[k].e} ${esc(MAT[k].n)}</option>`).join('')}</select></div>
+    <div class="campo"><label>Tema</label>
+      <input id="f-t" placeholder="Ej: Capítulo I · Política y poder"></div>
+    <p class="pista">Mandalo el día que lo estudiaste. Vuelve mañana, y después
+      a los 3, 7, 16 y 35 días si lo vas sabiendo.</p>
+  `, {
+    ok(){
+      const t = $('#f-t').value.trim();
+      if(!t){ alert('Escribí de qué tema es.'); return false; }
+      db.repaso.push({
+        id: 'r' + Math.random().toString(36).slice(2,7),
+        uc: $('#f-uc').value, t, nivel: 0, veces: 0,
+        prox: masDias(1), ult: hoyISO()
+      });
+      save(); pintar();
+    }
+  });
+}
+
+function filaRepaso(r, conBotones){
+  const m = MAT[r.uc] || {n:'?', e:'📌', c:'#BCAEDC'};
+  const d = dias(r.prox);
+  const cuando2 = d < 0 ? 'vencido hace ' + (-d) + (d === -1 ? ' día' : ' días')
+                : d === 0 ? 'para hoy' : (d === 1 ? 'mañana' : 'en ' + d + ' días');
+  return `<div class="rp ${d < 0 ? 'vencido' : ''}" style="border-left-color:${m.c}">
+    <button class="tx" data-rpedit="${r.id}">
+      <b>${m.e} ${esc(r.t)}</b>
+      <span>${esc(m.n)} · ${cuando2} · repasado ${r.veces || 0} ${(r.veces===1?'vez':'veces')}${bolitas(r.nivel||0)}</span>
+    </button>
+    ${conBotones
+      ? `<button class="bt no" data-rpno="${r.id}" title="Me costó">↻</button>
+         <button class="bt si" data-rpsi="${r.id}" title="Lo supe">✓</button>
+         <button class="bt mas" data-rpmas="${r.id}" title="Hoy no">⏭</button>`
+      : `<button class="bt mas" data-rphoy="${r.id}" title="Traerlo a hoy">↑</button>`}
+  </div>`;
+}
+
+function renderRepaso(){
+  const hoyR = vencen(), fut = futuros();
+
+  const S = {};
+  S.hoy = `<div class="card">
+    <div class="dia-head">
+      <h3>🔁 Para hoy</h3>
+      <span class="pill ${hoyR.length ? '' : 'full'}">${hoyR.length ? hoyR.length + ' tema' + (hoyR.length>1?'s':'') : 'al día ✨'}</span>
+    </div>
+    ${hoyR.length
+      ? `<p class="foco" style="margin:2px 0 12px">Tapá el material, contestá de memoria, y recién ahí mirá.
+         <b>✓</b> si te salió · <b>↻</b> si te costó · <b>⏭</b> si hoy preferís otra.</p>
+         ${hoyR.map(r => filaRepaso(r, true)).join('')}`
+      : '<p class="rp-vacio">No te toca repasar nada hoy 🌷<br>Aprovechá para adelantar material nuevo.</p>'}
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn ghost mini" data-rpadd="1">＋ Mandar un tema al repaso</button>
+    </div>
+  </div>`;
+
+  if(fut.length){
+    const porDia = {};
+    fut.forEach(r => { (porDia[r.prox] = porDia[r.prox] || []).push(r); });
+    S.prox = `<div class="card">
+      <div class="eyebrow">Lo que viene</div>
+      ${Object.keys(porDia).sort().slice(0,7).map(f => {
+        const d = dias(f);
+        return `<div class="rp-dia">${d === 1 ? 'Mañana' : 'En ' + d + ' días'} · ${fmt(f)}</div>
+                ${porDia[f].map(r => filaRepaso(r, false)).join('')}`;
+      }).join('')}
+    </div>`;
+  }
+
+  if(db.repaso.length){
+    const porUC = {};
+    db.repaso.forEach(r => { (porUC[r.uc] = porUC[r.uc] || []).push(r); });
+    S.mazo = '<div class="acordeon">' + cursando().filter(k => porUC[k]).map(k => {
+      const m = MAT[k], lista = porUC[k], open = abiertaR === k;
+      const listos = lista.filter(r => (r.nivel||0) >= INTERVALOS.length).length;
+      return `<div class="card mat ${open ? 'open' : ''}">
+        <button class="mat-head" data-accr="${k}">
+          <span class="rank" style="background:${m.c}33;color:${m.c}">${m.e}</span>
+          <span class="mat-tx"><b>${esc(m.n)}</b>
+            <span class="muted">${lista.length} tema${lista.length>1?'s':''} · ${listos} ya firme${listos===1?'':'s'}</span></span>
+          <span class="chev">${open ? '▾' : '▸'}</span>
+        </button>
+        ${open ? `<div class="mat-body">${lista
+            .sort((a,b) => a.prox < b.prox ? -1 : 1)
+            .map(r => filaRepaso(r, false)).join('')}</div>` : ''}
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  $('#v-repaso').innerHTML = (editando ? AVISO : '') + pintarSecciones('repaso', S);
+}
+
+/* tarjetita compacta para la solapa Hoy */
+function cardRepasoHoy(){
+  const hoyR = vencen();
+  if(!hoyR.length && !db.repaso.length) return '';
+  return `<div class="card">
+    <div class="dia-head">
+      <h3>🔁 Repaso</h3>
+      <span class="pill ${hoyR.length ? '' : 'full'}">${hoyR.length ? hoyR.length + ' para hoy' : 'al día ✨'}</span>
+    </div>
+    ${hoyR.length
+      ? hoyR.slice(0,4).map(r => {
+          const m = MAT[r.uc] || {n:'?', e:'📌'};
+          return `<div class="rp-mini"><b>${m.e} ${esc(r.t)}</b><em>${esc(m.n)}</em></div>`;
+        }).join('') + (hoyR.length > 4 ? `<p class="foco" style="margin:6px 0 0">y ${hoyR.length-4} más</p>` : '')
+      : '<p class="foco" style="margin:4px 0 0">Nada vence hoy. 🌷</p>'}
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn ghost mini" data-v="repaso">Ir al repaso</button>
+    </div>
+  </div>`;
+}
+
 /* =========================================================
    9. EVENTOS
    ========================================================= */
 function pintar(){
   const tt = document.getElementById('titulo');
   if(tt) tt.textContent = db.titulo || 'Mi semestre';
-  renderHoy(); renderSemana(); renderMaterias(); renderFechas(); renderNotas(); renderProgreso();
+  renderHoy(); renderSemana(); renderMaterias(); renderFechas(); renderNotas(); renderRepaso(); renderProgreso();
   const lun = new Date(HOY); lun.setDate(HOY.getDate() - idxHoy);
   const dom = new Date(lun);  dom.setDate(lun.getDate() + 6);
   const f = d => d.getDate() + '/' + (d.getMonth()+1);
@@ -2394,7 +2588,7 @@ function pintar(){
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-motivo],[data-motivo2],[data-motivo3],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
+  const t = ev.target.closest('[data-b],[data-meta],[data-rev],[data-uni],[data-del],[data-addbtn],[data-caddbtn],[data-ctrl],[data-cdel],[data-acc],[data-v],[data-nota],[data-salt],[data-salt2],[data-msalt],[data-msalt2],[data-xadddia],[data-xbdel],[data-xmdel],[data-motivo],[data-motivo2],[data-motivo3],[data-rpadd],[data-rpsi],[data-rpno],[data-rpmas],[data-rphoy],[data-rpedit],[data-rpdel],[data-accr],[data-bedit],[data-bdel],[data-badd],[data-dedit],[data-medit],[data-mdel],[data-madd],[data-hcerrar],[data-hok],[data-uedit],[data-usub],[data-sub],[data-sedit],[data-sdel],[data-saddbtn],[data-iedit],[data-xadd],[data-accf],[data-accn],[data-cald],[data-mes],[data-padd],[data-pedit],[data-pok],[data-pdel],[data-plimpiar],[data-ucedit],[data-ucdel],[data-ucadd],[data-swc],[data-secm],[data-secv],[data-secw],#b-exp,#b-imp,#b-reset,#b-rutina,#btn-tema,#btn-edit,#btn-desc,#titulo');
   if(!t) return;
 
   /* --- materias, título y descargas --- */
@@ -2410,6 +2604,40 @@ document.addEventListener('click', ev => {
   if(t.dataset.secw){
     const [v, i] = t.dataset.secw.split('|');
     const c = layout(v)[+i]; if(c){ c.med = !c.med; save(); pintar(); }
+    return;
+  }
+  if(t.dataset.rpadd){ agregarRepaso(); return; }
+  if(t.dataset.rpsi){ repasado(t.dataset.rpsi, true); return; }
+  if(t.dataset.rpno){ repasado(t.dataset.rpno, false); return; }
+  if(t.dataset.rpmas){ moverRepaso(t.dataset.rpmas, 1); return; }
+  if(t.dataset.rphoy){ moverRepaso(t.dataset.rphoy, 0); return; }
+  if(t.dataset.accr){ abiertaR = (abiertaR === t.dataset.accr) ? null : t.dataset.accr; renderRepaso(); return; }
+  if(t.dataset.rpedit){
+    const r = db.repaso.find(x => x.id === t.dataset.rpedit); if(!r) return;
+    abrirHoja('Editar tema del repaso', `
+      <div class="campo"><label>Unidad curricular</label>
+        <select id="f-uc">${cursando().map(k =>
+          `<option value="${k}" ${k===r.uc?'selected':''}>${MAT[k].e} ${esc(MAT[k].n)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Tema</label><input id="f-t" value="${esc(r.t)}"></div>
+      <div class="campo"><label>Próximo repaso</label><input type="date" id="f-p" value="${r.prox}"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn ghost mini" data-rpdel="${r.id}" style="margin:0">🗑️ Sacarlo del repaso</button>
+      </div>
+    `, {
+      ok(){
+        const t2 = $('#f-t').value.trim();
+        if(!t2){ alert('El tema no puede quedar vacío.'); return false; }
+        r.t = t2; r.uc = $('#f-uc').value; r.prox = $('#f-p').value || r.prox;
+        save(); pintar();
+      }
+    });
+    return;
+  }
+  if(t.dataset.rpdel){
+    const i = db.repaso.findIndex(x => x.id === t.dataset.rpdel);
+    if(i >= 0 && confirm('¿Sacar "' + db.repaso[i].t + '" del repaso?')){
+      db.repaso.splice(i, 1); cerrarHoja(); save(); pintar();
+    }
     return;
   }
   if(t.dataset.swc){
