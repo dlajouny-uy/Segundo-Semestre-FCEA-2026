@@ -691,8 +691,12 @@ function normalizarRutina(){
     }
   });
   DIAS = db.rutina;
-  /* el guardado va al final del ciclo: acá todavía no arrancó la sincronización */
-  if(reArmada) setTimeout(() => save(), 0);
+  /* OJO: acá NO se llama a save().
+     save() le pone fecha nueva a los datos, y eso haría que este dispositivo
+     le gane a la nube y le pise lo que hayas cargado en el otro.
+     La rutina nueva se guarda solo en este navegador, sin tocar la fecha;
+     viaja a la nube recién cuando hagas cualquier cambio a mano. */
+  if(reArmada){ try{ rawSet(KEY, JSON.stringify(db)); }catch(e){} }
   cargarMats();
   if(!db.layout) db.layout = {};
   if(!db.notas) db.notas = {};
